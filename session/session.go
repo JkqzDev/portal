@@ -396,11 +396,11 @@ func (s *Session) clearEntities() {
 func (s *Session) clearPlayerList() {
 	var entries = make([]protocol.PlayerListEntry, s.playerList.Size())
 	s.playerList.Each(func(uid [16]byte) bool {
-		entries = append(entries, protocol.PlayerListEntry{UUID: uid})
+		entries = append(entries, protocol.PlayerListEntry{ActionType: protocol.PlayerListActionRemove, UUID: uid})
 		return true
 	})
 
-	_ = s.conn.WritePacket(&packet.PlayerList{ActionType: packet.PlayerListActionRemove, Entries: entries})
+	_ = s.conn.WritePacket(&packet.PlayerList{Entries: entries})
 
 	s.playerList.Clear()
 }

@@ -172,12 +172,10 @@ func handlePackets(s *Session) {
 					s.effects.Remove(pk.EffectType)
 				}
 			case *packet.PlayerList:
-				if pk.ActionType == packet.PlayerListActionAdd {
-					for _, e := range pk.Entries {
+				for _, e := range pk.Entries {
+					if e.ActionType == protocol.PlayerListActionAdd {
 						s.playerList.Add(e.UUID)
-					}
-				} else {
-					for _, e := range pk.Entries {
+					} else {
 						s.playerList.Remove(e.UUID)
 					}
 				}

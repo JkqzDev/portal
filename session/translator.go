@@ -83,11 +83,15 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.ChangeMobProperty:
 		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	case *packet.ClientBoundMapItemData:
-		for i, x := range pk.TrackedObjects {
-			if x.Type == protocol.MapObjectTypeEntity {
-				x.EntityUniqueID = t.translateUniqueID(x.EntityUniqueID)
-				pk.TrackedObjects[i] = x
+		if objects, ok := pk.TrackedObjects.Value(); ok {
+			for i, x := range objects {
+				if x.Type == protocol.MapObjectTypeEntity {
+					if id, ok := x.EntityUniqueID.Value(); ok {
+						objects[i].EntityUniqueID = protocol.Option(t.translateUniqueID(id))
+					}
+				}
 			}
+			pk.TrackedObjects = protocol.Option(objects)
 		}
 	case *packet.ClientCheatAbility:
 		pk.AbilityData.EntityUniqueID = t.translateUniqueID(pk.AbilityData.EntityUniqueID)
@@ -152,7 +156,9 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.PlayerAuthInput:
 		if pk.InputData.Load(packet.InputFlagClientPredictedVehicle) {
-			pk.ClientPredictedVehicle = t.translateUniqueID(pk.ClientPredictedVehicle)
+			if id, ok := pk.ClientPredictedVehicle.Value(); ok {
+				pk.ClientPredictedVehicle = protocol.Option(t.translateUniqueID(id))
+			}
 		}
 	case *packet.PlayerList:
 		for i := range pk.Entries {
@@ -182,7 +188,9 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.SetScoreboardIdentity:
 		if pk.ActionType != packet.ScoreboardIdentityActionClear {
 			for i := range pk.Entries {
-				pk.Entries[i].EntityUniqueID = t.translateUniqueID(pk.Entries[i].EntityUniqueID)
+				if id, ok := pk.Entries[i].EntityUniqueID.Value(); ok {
+					pk.Entries[i].EntityUniqueID = protocol.Option(t.translateUniqueID(id))
+				}
 			}
 		}
 	case *packet.ShowCredits:
