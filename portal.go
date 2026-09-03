@@ -2,6 +2,7 @@ package portal
 
 import (
 	"fmt"
+	"github.com/akmalfairuz/legacy-version/legacyver"
 	"github.com/paroxity/portal/event"
 	"github.com/paroxity/portal/internal"
 	"github.com/paroxity/portal/server"
@@ -91,6 +92,9 @@ func (p *Portal) SetLoadBalancer(loadBalancer session.LoadBalancer) {
 // Listen starts to listen on the set address and allows connections from minecraft clients. An error is
 // returned if the listener failed to listen.
 func (p *Portal) Listen() error {
+	p.listenConfig.AcceptedProtocols = append(p.listenConfig.AcceptedProtocols, legacyver.All(false)...)
+	p.listenConfig.AllowInvalidPackets = true
+	p.listenConfig.AllowUnknownPackets = true
 	l, err := p.listenConfig.Listen("raknet", p.address)
 	if err != nil {
 		return err
