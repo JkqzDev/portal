@@ -136,7 +136,7 @@ func (s *Session) dial(srv *server.Server) (*minecraft.Conn, error) {
 	return minecraft.Dialer{
 		ClientData:          c,
 		IdentityData:        i,
-		EnableLegacyAuth:    srv.LegacyAuth(),
+		EnableLegacyAuth:    false,
 		KeepXBLIdentityData: !srv.LegacyAuth(),
 	}.Dial("raknet", srv.Address())
 }
