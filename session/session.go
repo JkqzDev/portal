@@ -117,6 +117,7 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 		s.translator = newTranslator(srvConn.GameData())
 		s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
 		s.ac.Handle(anticheatHandler{s: s})
+		s.ac.RemoveChecks("Movement", "Velocity")
 		handlePackets(s)
 	}()
 	return s, nil
