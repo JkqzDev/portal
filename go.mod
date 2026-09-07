@@ -3,6 +3,7 @@ module github.com/paroxity/portal
 go 1.26.0
 
 require (
+	github.com/Weekom-UHC/anticheat-go v0.0.0-00010101000000-000000000000
 	github.com/go-gl/mathgl v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.11
@@ -16,9 +17,12 @@ require (
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
+	github.com/chewxy/math32 v1.10.1 // indirect
+	github.com/df-mc/atomic v1.10.0 // indirect
 	github.com/df-mc/dragonfly v0.11.2-0.20260807000407-2988c7f4f621 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
 	github.com/df-mc/worldupgrader v1.0.21 // indirect
+	github.com/ethaniccc/float32-cube v0.0.0-20230113135104-a65c4cb545c8 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/samber/lo v1.53.0 // indirect
@@ -64,3 +68,5 @@ require (
 )
 
 replace github.com/akmalfairuz/legacy-version => ../multiversion-go
+
+replace github.com/Weekom-UHC/anticheat-go => ../anticheat-go

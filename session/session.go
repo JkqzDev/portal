@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Weekom-UHC/anticheat-go/player"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/google/uuid"
 	"github.com/paroxity/portal/event"
@@ -19,6 +20,7 @@ import (
 	"github.com/scylladb/go-set/i32set"
 	"github.com/scylladb/go-set/i64set"
 	"github.com/scylladb/go-set/strset"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/atomic"
 )
 
@@ -30,6 +32,8 @@ type Session struct {
 	conn  *minecraft.Conn
 	store *Store
 	bus   *event.Bus
+
+	ac *player.Player
 
 	hMutex sync.RWMutex
 	// h holds the current handler of the session.
@@ -111,6 +115,7 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 		}
 
 		s.translator = newTranslator(srvConn.GameData())
+		s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
 		handlePackets(s)
 	}()
 	return s, nil
@@ -342,12 +347,22 @@ func (s *Session) handler() Handler {
 	return s.h
 }
 
+func anticheatLogger(l internal.Logger) *logrus.Logger {
+	if lg, ok := l.(*logrus.Logger); ok {
+		return lg
+	}
+	return logrus.New()
+}
+
 // Close closes the session and any linked connections/counters.
 func (s *Session) Close() {
 	s.once.Do(func() {
 		if s.transferring.CAS(true, false) {
 			s.postTransfer.Store(false)
 			s.completeTransfer(errors.New("session closed during transfer"))
+		}
+		if s.ac != nil {
+			_ = s.ac.Close()
 		}
 		s.handler().HandleQuit()
 		s.Handle(NopHandler{})

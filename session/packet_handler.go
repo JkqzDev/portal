@@ -98,6 +98,12 @@ func handlePackets(s *Session) {
 
 						s.updateTranslatorData(gameData)
 
+						if s.ac != nil {
+							s.ac.SetServerConn(s.serverConn)
+							s.ac.SetRuntimeID(gameData.EntityRuntimeID)
+							s.ac.SetUniqueID(gameData.EntityUniqueID)
+						}
+
 						s.transferring.Store(false)
 						s.postTransfer.Store(true)
 
@@ -111,6 +117,10 @@ func handlePackets(s *Session) {
 			}
 
 			if s.Transferring() {
+				continue
+			}
+
+			if s.ac != nil && s.ac.Process(pk, true) {
 				continue
 			}
 
@@ -203,6 +213,10 @@ func handlePackets(s *Session) {
 				} else if pk.State == packet.RespawnStateReadyToSpawn {
 					s.dead.Store(false)
 				}
+			}
+
+			if s.ac != nil && s.ac.Process(pk, false) {
+				continue
 			}
 
 			ctx := event.C()
