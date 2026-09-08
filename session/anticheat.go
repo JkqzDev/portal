@@ -19,11 +19,13 @@ func (h anticheatHandler) HandleFlag(_ *dfevent.Context[struct{}], c check.Check
 	name += variant
 	player := h.s.conn.IdentityData().DisplayName
 
-	h.s.log.Infof("%s failed %s %s", player, name, utils.PrettyParameters(params, true))
+	info := utils.PrettyParameters(params, true)
+
+	h.s.log.Infof("%s failed %s %s", player, name, info)
 
 	h.broadcast(text.Colourf(
-		"<grey>[</grey><red>AntiCheat</red><grey>]</grey> <yellow>%s</yellow> <grey>is suspected of using</grey> <white>%s</white>",
-		player, name,
+		"<grey>[</grey><red>AntiCheat</red><grey>]</grey> <yellow>%s</yellow> <grey>is suspected of using</grey> <white>%s</white> <dark-grey>%s</dark-grey>",
+		player, name, info,
 	))
 }
 
