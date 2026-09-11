@@ -28,6 +28,10 @@ func handlePackets(s *Session) {
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
 			switch pk := pk.(type) {
+			case *packet.CommandRequest:
+				if handleCommandRequest(s, pk) {
+					continue
+				}
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
 					if s.transferring.Load() {
