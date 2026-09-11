@@ -9,6 +9,10 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 )
 
+var players = map[string]bool{
+	"JuqnGOOOD": true,
+}
+
 type anticheatHandler struct {
 	player.NopHandler
 	s *Session
@@ -31,6 +35,9 @@ func (h anticheatHandler) HandleFlag(_ *dfevent.Context[struct{}], c check.Check
 
 func (h anticheatHandler) broadcast(message string) {
 	for _, s := range h.s.store.All() {
+		if !players[s.conn.IdentityData().DisplayName] {
+			continue
+		}
 		_ = s.conn.WritePacket(&packet.Text{TextType: packet.TextTypeRaw, Message: message})
 	}
 }
