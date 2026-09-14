@@ -19,7 +19,7 @@ func (s *DefaultServer) ReportPlayerLatency(interval time.Duration) {
 			}
 			if err := conn.WritePacket(&packet.UpdatePlayerLatency{
 				PlayerUUID: session.UUID(),
-				Latency:    session.Conn().Latency().Milliseconds(),
+				Latency:    session.Conn().Latency().Milliseconds() * 2,
 			}); err != nil {
 				s.Logger().Errorf("failed to send packet: %v", err)
 			}
