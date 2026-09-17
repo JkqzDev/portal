@@ -4,13 +4,13 @@ go 1.26.1
 
 require (
 	github.com/Weekom-UHC/anticheat-go v0.0.0-00010101000000-000000000000
-	github.com/df-mc/dragonfly v0.11.2-0.20260807000407-2988c7f4f621
+	github.com/df-mc/dragonfly v0.11.5-0.20260917003918-cf0fa8b35db7
 	github.com/go-gl/mathgl v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.11
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6
-	github.com/sandertv/gophertunnel v1.61.0
+	github.com/sandertv/gophertunnel v1.62.0
 	github.com/scylladb/go-set v1.0.3-0.20200225121959-cc7b2070d91e
 	github.com/sirupsen/logrus v1.9.3
 	go.uber.org/atomic v1.11.0
@@ -21,11 +21,11 @@ require (
 	github.com/chewxy/math32 v1.11.1 // indirect
 	github.com/df-mc/atomic v1.10.0 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
-	github.com/df-mc/worldupgrader v1.0.21 // indirect
+	github.com/df-mc/worldupgrader v1.0.22 // indirect
 	github.com/ethaniccc/float32-cube v0.0.0-20230113135104-a65c4cb545c8 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
-	github.com/oomph-ac/bedsim v0.1.6 // indirect
+	github.com/oomph-ac/bedsim v0.1.7-0.20260916140831-34d11dc576ae // indirect
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
 )
