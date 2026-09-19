@@ -2,6 +2,9 @@ package portal
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
+
 	"github.com/akmalfairuz/legacy-version/legacyver"
 	"github.com/paroxity/portal/event"
 	"github.com/paroxity/portal/internal"
@@ -95,6 +98,12 @@ func (p *Portal) Listen() error {
 	p.listenConfig.AcceptedProtocols = append(p.listenConfig.AcceptedProtocols, legacyver.All(false)...)
 	p.listenConfig.AllowInvalidPackets = true
 	p.listenConfig.AllowUnknownPackets = true
+	if p.listenConfig.ErrorLog == nil {
+		// gophertunnel silently drops packet handling errors (marshal/unmarshal failures that don't panic)
+		// unless this is set - without it, a legacy packet failing to encode/decode for some player never
+		// surfaces anywhere.
+		p.listenConfig.ErrorLog = slog.New(slog.NewTextHandler(os.Stderr, nil))
+	}
 	l, err := p.listenConfig.Listen("raknet", p.address)
 	if err != nil {
 		return err

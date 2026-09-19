@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -94,6 +95,10 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 	srv.IncrementPlayerCount()
 	s.server = srv
 
+	if store.PlayerConnecting != nil {
+		store.PlayerConnecting(srv.Name(), conn.IdentityData().DisplayName, remoteIP(conn.RemoteAddr()))
+	}
+
 	s.loginMu.Lock()
 	go func() {
 		defer s.loginMu.Unlock()
@@ -141,19 +146,20 @@ func (s *Session) dial(srv *server.Server) (*minecraft.Conn, error) {
 }
 
 // login performs the initial login sequence for the session.
-func (s *Session) login() (err error) {
+func (s *Session) login() error {
 	var g sync.WaitGroup
 	g.Add(2)
+	var clientErr, serverErr error
 	go func() {
-		err = s.conn.StartGameTimeout(s.serverConn.GameData(), time.Minute)
-		g.Done()
+		defer g.Done()
+		clientErr = s.conn.StartGameTimeout(s.serverConn.GameData(), time.Minute)
 	}()
 	go func() {
-		err = s.serverConn.DoSpawnTimeout(time.Minute)
-		g.Done()
+		defer g.Done()
+		serverErr = s.serverConn.DoSpawnTimeout(time.Minute)
 	}()
 	g.Wait()
-	return
+	return errors.Join(clientErr, serverErr)
 }
 
 // waitForLogin uses the login mutex to wait for the login to complete. If the player is still logging in, loginMu will
@@ -467,4 +473,14 @@ func selectProxyDimension(source, target int32) int32 {
 		}
 	}
 	return packet.DimensionOverworld
+}
+
+// remoteIP returns just the IP portion of a net.Addr, dropping the port. If it can't be split into host and
+// port (unexpected address format), the address's string form is returned as-is.
+func remoteIP(addr net.Addr) string {
+	host, _, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return addr.String()
+	}
+	return host
 }

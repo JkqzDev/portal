@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/Weekom-UHC/anticheat-go v0.0.0-00010101000000-000000000000
-	github.com/df-mc/dragonfly v0.11.5-0.20260917003918-cf0fa8b35db7
+	github.com/df-mc/dragonfly v0.11.5
 	github.com/go-gl/mathgl v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.11
@@ -60,11 +60,11 @@ require (
 	github.com/pion/webrtc/v4 v4.2.18 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
+	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
 	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )
 

@@ -16,6 +16,7 @@ import (
 func handlePackets(s *Session) {
 	go func() {
 		defer s.Close()
+		defer recoverPacketLoop(s, "client->server")
 		for {
 			pk, err := s.Conn().ReadPacket()
 			if err != nil {
@@ -138,6 +139,8 @@ func handlePackets(s *Session) {
 	}()
 
 	go func() {
+		defer s.Close()
+		defer recoverPacketLoop(s, "server->client")
 		for {
 			conn := s.ServerConn()
 			pk, err := conn.ReadPacket()
@@ -231,6 +234,15 @@ func handlePackets(s *Session) {
 			})
 		}
 	}()
+}
+
+// recoverPacketLoop stops a panic while marshaling/unmarshaling one packet from crashing the whole proxy
+// process, closing only the affected session instead: gophertunnel's minecraft.Conn.WritePacket doesn't
+// recover its own panics.
+func recoverPacketLoop(s *Session, direction string) {
+	if r := recover(); r != nil {
+		s.log.Errorf("session %s: recovered from panic in %s packet loop: %v", s.uuid, direction, r)
+	}
 }
 
 func clearLegacyIdentity(pk packet.Packet, legacyAuth bool) {

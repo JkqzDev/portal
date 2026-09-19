@@ -15,6 +15,13 @@ type Store struct {
 	// PreTransfer is called before a transfer dial to notify the target server to clean up
 	// stale sessions. It receives the target server name and the player name being transferred.
 	PreTransfer func(serverName, playerName string)
+
+	// PlayerConnecting is called right before a session dials the target server for the first time,
+	// carrying the player's real remote address as seen by the proxy. It fires as early as possible - over
+	// an already-established connection, well ahead of the fresh RakNet handshake the target server still
+	// has to complete with the proxy - so the server has the real address in hand before the player's login
+	// packet even arrives.
+	PlayerConnecting func(serverName, playerName, address string)
 }
 
 // NewDefaultStore creates a new Store and returns it.
