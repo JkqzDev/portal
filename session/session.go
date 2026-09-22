@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Weekom-UHC/anticheat-go/player"
+	"github.com/akmalfairuz/legacy-version/legacyver"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/google/uuid"
 	"github.com/paroxity/portal/event"
@@ -373,6 +374,7 @@ func (s *Session) Close() {
 
 		s.store.Delete(s.UUID())
 
+		legacyver.ClearConnState(s.conn)
 		_ = s.conn.Close()
 		if s.serverConn != nil {
 			_ = s.serverConn.Close()
