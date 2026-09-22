@@ -19,7 +19,7 @@ type TransferResponse struct {
 	PlayerUUID uuid.UUID
 	// Status is the response status from the transfer. The possible values for this can be found above.
 	Status byte
-	// Error is the error message when the Status field is TransferResponseError.
+	// Error is a human-readable reason for the failure, set for every non-success status.
 	Error string
 }
 
@@ -32,7 +32,7 @@ func (*TransferResponse) ID() uint16 {
 func (pk *TransferResponse) Marshal(w *protocol.Writer) {
 	w.UUID(&pk.PlayerUUID)
 	w.Uint8(&pk.Status)
-	if pk.Status == TransferResponseError {
+	if pk.Status != TransferResponseSuccess {
 		w.String(&pk.Error)
 	}
 }
@@ -41,7 +41,7 @@ func (pk *TransferResponse) Marshal(w *protocol.Writer) {
 func (pk *TransferResponse) Unmarshal(r *protocol.Reader) {
 	r.UUID(&pk.PlayerUUID)
 	r.Uint8(&pk.Status)
-	if pk.Status == TransferResponseError {
+	if pk.Status != TransferResponseSuccess {
 		r.String(&pk.Error)
 	}
 }

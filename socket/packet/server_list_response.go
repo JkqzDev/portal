@@ -17,6 +17,8 @@ type ServerEntry struct {
 	Name string
 	// PlayerCount returns player count of the server.
 	PlayerCount int64
+	// Players is the list of names of the players currently on the server.
+	Players []string
 }
 
 // ID ...
@@ -32,6 +34,12 @@ func (pk *ServerListResponse) Marshal(w *protocol.Writer) {
 	for _, s := range pk.Servers {
 		w.String(&s.Name)
 		w.Int64(&s.PlayerCount)
+
+		pl := uint32(len(s.Players))
+		w.Uint32(&pl)
+		for _, p := range s.Players {
+			w.String(&p)
+		}
 	}
 }
 
@@ -44,5 +52,12 @@ func (pk *ServerListResponse) Unmarshal(r *protocol.Reader) {
 	for i := uint32(0); i < l; i++ {
 		r.String(&pk.Servers[i].Name)
 		r.Int64(&pk.Servers[i].PlayerCount)
+
+		var pl uint32
+		r.Uint32(&pl)
+		pk.Servers[i].Players = make([]string, pl)
+		for j := uint32(0); j < pl; j++ {
+			r.String(&pk.Servers[i].Players[j])
+		}
 	}
 }

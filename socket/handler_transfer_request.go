@@ -20,16 +20,16 @@ func (*TransferRequestHandler) Handle(p packet.Packet, srv Server, c *Client) er
 
 	targetSrv, ok := srv.ServerRegistry().Server(pk.Server)
 	if !ok {
-		return response(packet.TransferResponseServerNotFound, "")
+		return response(packet.TransferResponseServerNotFound, "server "+pk.Server+" not found")
 	}
 
 	s, ok := srv.SessionStore().Load(pk.PlayerUUID)
 	if !ok {
-		return response(packet.TransferResponsePlayerNotFound, "")
+		return response(packet.TransferResponsePlayerNotFound, "player not found")
 	}
 
 	if s.Server().Address() == targetSrv.Address() {
-		return response(packet.TransferResponseAlreadyOnServer, "")
+		return response(packet.TransferResponseAlreadyOnServer, "player is already on "+pk.Server)
 	}
 
 	if err := s.Transfer(targetSrv); err != nil {
