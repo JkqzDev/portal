@@ -1,7 +1,10 @@
 package socket
 
 import (
+	"errors"
+
 	"github.com/paroxity/portal/socket/packet"
+	"github.com/sandertv/gophertunnel/minecraft"
 )
 
 // TransferRequestHandler is responsible for handling the TransferRequest packet sent by servers.
@@ -33,6 +36,13 @@ func (*TransferRequestHandler) Handle(p packet.Packet, srv Server, c *Client) er
 	}
 
 	if err := s.Transfer(targetSrv); err != nil {
+		// If the target server rejected the connection with a Disconnect packet (e.g. its own
+		// whitelist), surface just that message rather than the full dial/receive error chain
+		// wrapping it.
+		var disconnectErr minecraft.DisconnectError
+		if errors.As(err, &disconnectErr) {
+			return response(packet.TransferResponseError, disconnectErr.Error())
+		}
 		return response(packet.TransferResponseError, err.Error())
 	}
 
