@@ -299,7 +299,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 				_ = s.conn.WritePacket(&packet.LevelChunk{
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
-					SubChunkCount: 1,
+					SubChunkCount: 0,
 					RawPayload:    emptyChunk(proxyDimension),
 				})
 			}
