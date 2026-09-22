@@ -1,14 +1,16 @@
 module github.com/paroxity/portal
 
-go 1.26.0
+go 1.26.1
 
 require (
+	github.com/Weekom-UHC/anticheat-go v0.0.0-00010101000000-000000000000
+	github.com/df-mc/dragonfly v0.11.5
 	github.com/go-gl/mathgl v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-colorable v0.1.11
 	github.com/redis/go-redis/v9 v9.21.0
 	github.com/sandertv/go-raknet v1.15.2-0.20260705184311-0d1fd09e2cf6
-	github.com/sandertv/gophertunnel v1.61.0
+	github.com/sandertv/gophertunnel v1.62.0
 	github.com/scylladb/go-set v1.0.3-0.20200225121959-cc7b2070d91e
 	github.com/sirupsen/logrus v1.9.3
 	go.uber.org/atomic v1.11.0
@@ -16,11 +18,14 @@ require (
 
 require (
 	github.com/brentp/intintmap v0.0.0-20251106190759-56907b1f8479 // indirect
-	github.com/df-mc/dragonfly v0.11.2-0.20260807000407-2988c7f4f621 // indirect
+	github.com/chewxy/math32 v1.11.1 // indirect
+	github.com/df-mc/atomic v1.10.0 // indirect
 	github.com/df-mc/goleveldb v1.1.9 // indirect
-	github.com/df-mc/worldupgrader v1.0.21 // indirect
+	github.com/df-mc/worldupgrader v1.0.22 // indirect
+	github.com/ethaniccc/float32-cube v0.0.0-20230113135104-a65c4cb545c8 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
+	github.com/oomph-ac/bedsim v0.1.7-0.20260916140831-34d11dc576ae // indirect
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
 )
@@ -55,12 +60,14 @@ require (
 	github.com/pion/webrtc/v4 v4.2.18 // indirect
 	github.com/wlynxg/anet v0.0.5 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
-	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743 // indirect
+	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba // indirect
 	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/oauth2 v0.37.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 )
 
 replace github.com/akmalfairuz/legacy-version => ../multiversion-go
+
+replace github.com/Weekom-UHC/anticheat-go => ../anticheat-go

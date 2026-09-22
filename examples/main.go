@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -110,6 +112,18 @@ func main() {
 			return
 		}
 		_ = client.WritePacket(&socketpacket.DisconnectPlayer{PlayerName: playerName})
+	}
+
+	// Forward each player's real remote address to the server they're connecting to. Every player reaches
+	// the server through this same proxy, so without this the server only ever sees the proxy's own
+	// address - which breaks IP-based logic there (bans, anti-VPN, logging) and means a single flagged
+	// connection can get the proxy's address blocked for everyone behind it instead of just that player.
+	p.SessionStore().PlayerConnecting = func(serverName, playerName, address string) {
+		client, ok := socketServer.Client(serverName)
+		if !ok {
+			return
+		}
+		_ = client.WritePacket(&socketpacket.PlayerAddress{PlayerName: playerName, Address: address})
 	}
 
 	if conf.PlayerLatency.Report {
@@ -221,6 +235,10 @@ func main() {
 		if err != nil {
 			if s != nil {
 				s.Disconnect(text.Colourf("<red>%v</red>", err))
+			}
+			if errors.Is(err, net.ErrClosed) {
+				// The listener was closed as part of a graceful shutdown; there's nothing left to accept.
+				return
 			}
 			p.Logger().Errorf("failed to accept connection: %v", err)
 			continue

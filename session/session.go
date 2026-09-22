@@ -2,10 +2,13 @@ package session
 
 import (
 	"errors"
+	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Weekom-UHC/anticheat-go/player"
+	"github.com/akmalfairuz/legacy-version/legacyver"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/google/uuid"
 	"github.com/paroxity/portal/event"
@@ -19,6 +22,7 @@ import (
 	"github.com/scylladb/go-set/i32set"
 	"github.com/scylladb/go-set/i64set"
 	"github.com/scylladb/go-set/strset"
+	"github.com/sirupsen/logrus"
 	"go.uber.org/atomic"
 )
 
@@ -30,6 +34,8 @@ type Session struct {
 	conn  *minecraft.Conn
 	store *Store
 	bus   *event.Bus
+
+	ac *player.Player
 
 	hMutex sync.RWMutex
 	// h holds the current handler of the session.
@@ -90,6 +96,10 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 	srv.IncrementPlayerCount()
 	s.server = srv
 
+	if store.PlayerConnecting != nil {
+		store.PlayerConnecting(srv.Name(), conn.IdentityData().DisplayName, remoteIP(conn.RemoteAddr()))
+	}
+
 	s.loginMu.Lock()
 	go func() {
 		defer s.loginMu.Unlock()
@@ -111,6 +121,8 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 		}
 
 		s.translator = newTranslator(srvConn.GameData())
+		s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
+		s.ac.Handle(anticheatHandler{s: s})
 		handlePackets(s)
 	}()
 	return s, nil
@@ -126,35 +138,29 @@ func (s *Session) dial(srv *server.Server) (*minecraft.Conn, error) {
 	c.PlayFabID = ""
 	c.ThirdPartyName = i.DisplayName
 
-	// For legacy auth servers (e.g. PocketMine), clear XUID as it is embedded in the Xbox JWT chain.
-	// For non-legacy auth servers (e.g. GeyserMC), keep the real XUID so each player has a unique
-	// identifier. GeyserMC uses XUID to detect duplicate sessions — clearing it causes all proxy
-	// connections to collide with "already logged in".
-	if srv.LegacyAuth() {
-		i.XUID = ""
-	}
 	return minecraft.Dialer{
 		ClientData:          c,
 		IdentityData:        i,
 		EnableLegacyAuth:    false,
-		KeepXBLIdentityData: !srv.LegacyAuth(),
+		KeepXBLIdentityData: true,
 	}.Dial("raknet", srv.Address())
 }
 
 // login performs the initial login sequence for the session.
-func (s *Session) login() (err error) {
+func (s *Session) login() error {
 	var g sync.WaitGroup
 	g.Add(2)
+	var clientErr, serverErr error
 	go func() {
-		err = s.conn.StartGameTimeout(s.serverConn.GameData(), time.Minute)
-		g.Done()
+		defer g.Done()
+		clientErr = s.conn.StartGameTimeout(s.serverConn.GameData(), time.Minute)
 	}()
 	go func() {
-		err = s.serverConn.DoSpawnTimeout(time.Minute)
-		g.Done()
+		defer g.Done()
+		serverErr = s.serverConn.DoSpawnTimeout(time.Minute)
 	}()
 	g.Wait()
-	return
+	return errors.Join(clientErr, serverErr)
 }
 
 // waitForLogin uses the login mutex to wait for the login to complete. If the player is still logging in, loginMu will
@@ -253,7 +259,12 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		conn, err := s.dial(srv)
+		if s.store.PlayerConnecting != nil {
+			s.store.PlayerConnecting(srv.Name(), s.conn.IdentityData().DisplayName, remoteIP(s.conn.RemoteAddr()))
+		}
+
+		var conn *minecraft.Conn
+		conn, err = s.dial(srv)
 		if err != nil {
 			// If the server still thinks the player is logged in, retry once after a longer delay
 			// to allow the Spigot server to fully clean up the kicked session.
@@ -293,7 +304,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 				_ = s.conn.WritePacket(&packet.LevelChunk{
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
-					SubChunkCount: 1,
+					SubChunkCount: 0,
 					RawPayload:    emptyChunk(proxyDimension),
 				})
 			}
@@ -342,12 +353,22 @@ func (s *Session) handler() Handler {
 	return s.h
 }
 
+func anticheatLogger(l internal.Logger) *logrus.Logger {
+	if lg, ok := l.(*logrus.Logger); ok {
+		return lg
+	}
+	return logrus.New()
+}
+
 // Close closes the session and any linked connections/counters.
 func (s *Session) Close() {
 	s.once.Do(func() {
 		if s.transferring.CAS(true, false) {
 			s.postTransfer.Store(false)
 			s.completeTransfer(errors.New("session closed during transfer"))
+		}
+		if s.ac != nil {
+			_ = s.ac.Close()
 		}
 		s.handler().HandleQuit()
 		s.Handle(NopHandler{})
@@ -358,6 +379,7 @@ func (s *Session) Close() {
 
 		s.store.Delete(s.UUID())
 
+		legacyver.ClearConnState(s.conn)
 		_ = s.conn.Close()
 		if s.serverConn != nil {
 			_ = s.serverConn.Close()
@@ -458,4 +480,14 @@ func selectProxyDimension(source, target int32) int32 {
 		}
 	}
 	return packet.DimensionOverworld
+}
+
+// remoteIP returns just the IP portion of a net.Addr, dropping the port. If it can't be split into host and
+// port (unexpected address format), the address's string form is returned as-is.
+func remoteIP(addr net.Addr) string {
+	host, _, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return addr.String()
+	}
+	return host
 }

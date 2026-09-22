@@ -16,6 +16,7 @@ import (
 func handlePackets(s *Session) {
 	go func() {
 		defer s.Close()
+		defer recoverPacketLoop(s, "client->server")
 		for {
 			pk, err := s.Conn().ReadPacket()
 			if err != nil {
@@ -28,6 +29,10 @@ func handlePackets(s *Session) {
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
 			switch pk := pk.(type) {
+			case *packet.CommandRequest:
+				if handleCommandRequest(s, pk) {
+					continue
+				}
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
 					if s.transferring.Load() {
@@ -98,6 +103,12 @@ func handlePackets(s *Session) {
 
 						s.updateTranslatorData(gameData)
 
+						if s.ac != nil {
+							s.ac.SetServerConn(s.serverConn)
+							s.ac.SetRuntimeID(gameData.EntityRuntimeID)
+							s.ac.SetUniqueID(gameData.EntityUniqueID)
+						}
+
 						s.transferring.Store(false)
 						s.postTransfer.Store(true)
 
@@ -114,6 +125,10 @@ func handlePackets(s *Session) {
 				continue
 			}
 
+			if s.ac != nil && s.ac.Process(pk, true) {
+				continue
+			}
+
 			ctx := event.C()
 			s.handler().HandleServerBoundPacket(ctx, pk)
 
@@ -124,6 +139,8 @@ func handlePackets(s *Session) {
 	}()
 
 	go func() {
+		defer s.Close()
+		defer recoverPacketLoop(s, "server->client")
 		for {
 			conn := s.ServerConn()
 			pk, err := conn.ReadPacket()
@@ -205,6 +222,10 @@ func handlePackets(s *Session) {
 				}
 			}
 
+			if s.ac != nil && s.ac.Process(pk, false) {
+				continue
+			}
+
 			ctx := event.C()
 			s.handler().HandleClientBoundPacket(ctx, pk)
 
@@ -213,6 +234,15 @@ func handlePackets(s *Session) {
 			})
 		}
 	}()
+}
+
+// recoverPacketLoop stops a panic while marshaling/unmarshaling one packet from crashing the whole proxy
+// process, closing only the affected session instead: gophertunnel's minecraft.Conn.WritePacket doesn't
+// recover its own panics.
+func recoverPacketLoop(s *Session, direction string) {
+	if r := recover(); r != nil {
+		s.log.Errorf("session %s: recovered from panic in %s packet loop: %v", s.uuid, direction, r)
+	}
 }
 
 func clearLegacyIdentity(pk packet.Packet, legacyAuth bool) {
