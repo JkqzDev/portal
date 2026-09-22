@@ -28,6 +28,8 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
+			s.log.Infof("DEBUG client->server packet: %T", pk)
+
 			switch pk := pk.(type) {
 			case *packet.CommandRequest:
 				if handleCommandRequest(s, pk) {
