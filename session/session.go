@@ -305,6 +305,10 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
 					SubChunkCount: 0,
+					// SubChunkLimit must always accompany a SubChunkCount of 0 - real servers never send one
+					// without the other (see dragonfly's session.sendNetworkChunk), and a native 1.26.50+
+					// client sent SubChunkCount 0 without it crashes instead of treating it as an empty chunk.
+					SubChunkLimit: protocol.Option(int32(0)),
 					RawPayload:    emptyChunk(proxyDimension),
 				})
 			}
