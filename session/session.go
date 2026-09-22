@@ -259,6 +259,10 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			time.Sleep(1 * time.Second)
 		}
 
+		if s.store.PlayerConnecting != nil {
+			s.store.PlayerConnecting(srv.Name(), s.conn.IdentityData().DisplayName, remoteIP(s.conn.RemoteAddr()))
+		}
+
 		var conn *minecraft.Conn
 		conn, err = s.dial(srv)
 		if err != nil {
