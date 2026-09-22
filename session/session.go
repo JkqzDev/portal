@@ -476,7 +476,6 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 		Position:  pos,
 	})
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
-	_ = s.conn.WritePacket(&packet.PlayerAction{ActionType: protocol.PlayerActionDimensionChangeDone})
 }
 
 func selectProxyDimension(source, target int32) int32 {
