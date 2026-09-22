@@ -301,19 +301,21 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		chunkZ := int32(pos.Z()) >> 4
 		for x := int32(-2); x <= 2; x++ {
 			for z := int32(-2); z <= 2; z++ {
-				_ = s.conn.WritePacket(&packet.LevelChunk{
+				if err := s.conn.WritePacket(&packet.LevelChunk{
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
 					SubChunkCount: 0,
-					// SubChunkLimit must always accompany a SubChunkCount of 0 - real servers never send one
-					// without the other (see dragonfly's session.sendNetworkChunk), and a native 1.26.50+
-					// client sent SubChunkCount 0 without it crashes instead of treating it as an empty chunk.
 					SubChunkLimit: protocol.Option(int32(0)),
 					RawPayload:    emptyChunk(proxyDimension),
-				})
+				}); err != nil {
+					s.log.Errorf("DEBUG write placeholder LevelChunk: %v", err)
+				}
 			}
 		}
-		_ = s.conn.Flush()
+		if err := s.conn.Flush(); err != nil {
+			s.log.Errorf("DEBUG flush placeholder chunks: %v", err)
+		}
+		s.log.Infof("DEBUG placeholder chunks + changeDimension(%d) flushed for %s", proxyDimension, s.conn.IdentityData().DisplayName)
 
 		s.serverMu.Lock()
 		s.server.DecrementPlayerCount()

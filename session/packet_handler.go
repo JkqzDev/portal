@@ -54,40 +54,58 @@ func handlePackets(s *Session) {
 							w.Done()
 						}()
 
-						_ = s.conn.WritePacket(&packet.MovePlayer{
+						if err := s.conn.WritePacket(&packet.MovePlayer{
 							EntityRuntimeID: s.originalRuntimeID,
 							Position:        gameData.PlayerPosition,
 							Pitch:           gameData.Pitch,
 							Yaw:             gameData.Yaw,
 							Mode:            packet.MoveModeReset,
-						})
+						}); err != nil {
+							s.log.Errorf("DEBUG write MovePlayer: %v", err)
+						}
 
-						_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000})
-						_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm})
-						_ = s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)})
-						_ = s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules})
-						_ = s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode})
+						if err := s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000}); err != nil {
+							s.log.Errorf("DEBUG write LevelEvent stoprain: %v", err)
+						}
+						if err := s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm}); err != nil {
+							s.log.Errorf("DEBUG write LevelEvent stopthunder: %v", err)
+						}
+						if err := s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)}); err != nil {
+							s.log.Errorf("DEBUG write SetDifficulty: %v", err)
+						}
+						if err := s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules}); err != nil {
+							s.log.Errorf("DEBUG write GameRulesChanged: %v", err)
+						}
+						if err := s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode}); err != nil {
+							s.log.Errorf("DEBUG write SetPlayerGameType: %v", err)
+						}
 
-						// Tell the client to request chunks around the new position immediately.
-						_ = s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
+						if err := s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
 							Position: protocol.BlockPos{
 								int32(gameData.PlayerPosition.X()),
 								int32(gameData.PlayerPosition.Y()),
 								int32(gameData.PlayerPosition.Z()),
 							},
 							Radius: uint32(gameData.ChunkRadius) << 4,
-						})
+						}); err != nil {
+							s.log.Errorf("DEBUG write NetworkChunkPublisherUpdate: %v", err)
+						}
 
 						if s.dead.CAS(true, false) {
-							_ = s.conn.WritePacket(&packet.Respawn{
+							if err := s.conn.WritePacket(&packet.Respawn{
 								Position:        gameData.PlayerPosition,
 								State:           packet.RespawnStateReadyToSpawn,
 								EntityRuntimeID: s.originalRuntimeID,
-							})
+							}); err != nil {
+								s.log.Errorf("DEBUG write Respawn: %v", err)
+							}
 						}
 
 						w.Wait()
-						_ = s.conn.Flush()
+						if err := s.conn.Flush(); err != nil {
+							s.log.Errorf("DEBUG flush: %v", err)
+						}
+						s.log.Infof("DEBUG transfer completion sequence flushed for %s", s.Conn().IdentityData().DisplayName)
 
 						// Send a Disconnect packet before closing so the downstream server
 						// (e.g. GeyserMC → Spigot) immediately cleans up the player session
