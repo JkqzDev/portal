@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -233,6 +235,10 @@ func main() {
 		if err != nil {
 			if s != nil {
 				s.Disconnect(text.Colourf("<red>%v</red>", err))
+			}
+			if errors.Is(err, net.ErrClosed) {
+				// The listener was closed as part of a graceful shutdown; there's nothing left to accept.
+				return
 			}
 			p.Logger().Errorf("failed to accept connection: %v", err)
 			continue

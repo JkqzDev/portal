@@ -259,7 +259,8 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			time.Sleep(1 * time.Second)
 		}
 
-		conn, err := s.dial(srv)
+		var conn *minecraft.Conn
+		conn, err = s.dial(srv)
 		if err != nil {
 			// If the server still thinks the player is logged in, retry once after a longer delay
 			// to allow the Spigot server to fully clean up the kicked session.
