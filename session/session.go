@@ -304,8 +304,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 				if err := s.conn.WritePacket(&packet.LevelChunk{
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
-					SubChunkCount: 0,
-					SubChunkLimit: protocol.Option(int32(0)),
+					SubChunkCount: 1,
 					RawPayload:    emptyChunk(proxyDimension),
 				}); err != nil {
 					s.log.Errorf("DEBUG write placeholder LevelChunk: %v", err)
@@ -476,6 +475,7 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 		Position:  pos,
 	})
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
+	_ = s.conn.WritePacket(&packet.PlayerAction{ActionType: protocol.PlayerActionDimensionChangeDone})
 }
 
 func selectProxyDimension(source, target int32) int32 {
