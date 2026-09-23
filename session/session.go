@@ -298,8 +298,6 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		pos := s.conn.GameData().PlayerPosition
 		s.changeDimension(proxyDimension, pos)
 
-		multiversion := s.conn.Proto().ID() != internal.BedrockProtocolVersion
-
 		chunkX := int32(pos.X()) >> 4
 		chunkZ := int32(pos.Z()) >> 4
 		for x := int32(-2); x <= 2; x++ {
@@ -308,7 +306,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
 					Dimension:     proxyDimension,
 					SubChunkCount: 1,
-					RawPayload:    emptyChunk(proxyDimension, multiversion),
+					RawPayload:    emptyChunk(proxyDimension, true),
 				}); err != nil {
 					s.log.Errorf("DEBUG write placeholder LevelChunk: %v", err)
 				}
