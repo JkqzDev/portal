@@ -3,7 +3,6 @@ package session
 import (
 	"errors"
 	"net"
-	"time"
 
 	"github.com/paroxity/portal/event"
 	"github.com/sandertv/gophertunnel/minecraft"
@@ -28,8 +27,6 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
-			s.log.Infof("DEBUG client->server packet: %T", pk)
-
 			switch pk := pk.(type) {
 			case *packet.CommandRequest:
 				if handleCommandRequest(s, pk) {
@@ -37,6 +34,10 @@ func handlePackets(s *Session) {
 				}
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
+					select {
+					case s.dimensionAck <- struct{}{}:
+					default:
+					}
 					continue
 				}
 			}
@@ -86,12 +87,6 @@ func handlePackets(s *Session) {
 				continue
 			}
 			s.translatePacket(pk)
-
-			if lc, ok := pk.(*packet.LevelChunk); ok {
-				s.log.Infof("DEBUG server->client LevelChunk: pos=%v dim=%d subChunkCount=%d cacheEnabled=%v rawPayloadLen=%d", lc.Position, lc.Dimension, lc.SubChunkCount, lc.CacheEnabled, len(lc.RawPayload))
-			} else {
-				s.log.Infof("DEBUG server->client packet: %T", pk)
-			}
 
 			switch pk := pk.(type) {
 			case *packet.AddActor:
@@ -158,10 +153,6 @@ func handlePackets(s *Session) {
 			ctx.Continue(func() {
 				_ = s.Conn().WritePacket(pk)
 			})
-
-			if _, ok := pk.(*packet.LevelChunk); ok {
-				time.Sleep(2 * time.Millisecond)
-			}
 		}
 	}()
 }

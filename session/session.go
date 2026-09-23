@@ -3,7 +3,6 @@ package session
 import (
 	"errors"
 	"net"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -63,6 +62,8 @@ type Session struct {
 	dead            atomic.Bool
 	loadingScreenID atomic.Uint32
 	once            sync.Once
+
+	dimensionAck chan struct{}
 }
 
 // New creates a new Session with the provided connection. bus may be nil, in which case no events are
@@ -82,6 +83,8 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 
 		h:    NopHandler{},
 		uuid: uuid.MustParse(conn.IdentityData().Identity),
+
+		dimensionAck: make(chan struct{}, 1),
 	}
 
 	store.Store(s)
@@ -118,8 +121,6 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 			return
 		}
 		log.Infof("%s has been connected to server %s", conn.IdentityData().DisplayName, srv.Name())
-		itemCount, itemSum := itemsFingerprint(srvConn.GameData().Items)
-		log.Infof("DEBUG %s initial GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v items=%d itemRuntimeIDSum=%d", conn.IdentityData().DisplayName, srvConn.GameData().Dimension, srvConn.GameData().EntityRuntimeID, srvConn.GameData().EntityUniqueID, len(srvConn.GameData().CustomBlocks), len(srvConn.GameData().GameRules), srvConn.GameData().UseBlockNetworkIDHashes, itemCount, itemSum)
 		if s.bus != nil {
 			s.bus.Publish(event.TopicPlayerJoin, event.PlayerPayload{UUID: s.uuid, Name: conn.IdentityData().DisplayName})
 		}
@@ -293,21 +294,22 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		}
 
 		gameData := conn.GameData()
-		itemCount, itemSum := itemsFingerprint(gameData.Items)
-		s.log.Infof("DEBUG %s transfer target GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v chunkRadius=%d items=%d itemRuntimeIDSum=%d", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.EntityRuntimeID, gameData.EntityUniqueID, len(gameData.CustomBlocks), len(gameData.GameRules), gameData.UseBlockNetworkIDHashes, gameData.ChunkRadius, itemCount, itemSum)
 
 		s.serverMu.Lock()
-		currentDimension := s.serverConn.GameData().Dimension
-
 		oldServerConn := s.serverConn
 		s.serverConn = conn
 		s.updateTranslatorData(gameData)
 		s.serverMu.Unlock()
 
-		if currentDimension == gameData.Dimension {
-			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			s.changeDimension(proxyDimension, gameData.PlayerPosition)
-			time.Sleep(250 * time.Millisecond)
+		select {
+		case <-s.dimensionAck:
+		default:
+		}
+		fakePosition := gameData.PlayerPosition.Add(mgl32.Vec3{2000, 0, 2000})
+		s.changeDimension(gameData.Dimension, fakePosition)
+		select {
+		case <-s.dimensionAck:
+		case <-time.After(500 * time.Millisecond):
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
@@ -414,16 +416,6 @@ func (s *Session) handler() Handler {
 	s.hMutex.RLock()
 	defer s.hMutex.RUnlock()
 	return s.h
-}
-
-func itemsFingerprint(items []protocol.ItemEntry) (count int, runtimeIDSum int64) {
-	sorted := make([]protocol.ItemEntry, len(items))
-	copy(sorted, items)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
-	for _, it := range sorted {
-		runtimeIDSum += int64(it.RuntimeID)
-	}
-	return len(sorted), runtimeIDSum
 }
 
 func anticheatLogger(l internal.Logger) *logrus.Logger {
@@ -546,15 +538,6 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
 	_ = s.conn.WritePacket(&packet.PlayStatus{Status: packet.PlayStatusPlayerSpawn})
 	_ = s.conn.WritePacket(&packet.PlayerAction{EntityRuntimeID: s.originalRuntimeID, ActionType: protocol.PlayerActionDimensionChangeDone})
-}
-
-func selectProxyDimension(source, target int32) int32 {
-	for _, dimension := range []int32{packet.DimensionOverworld, packet.DimensionNether, packet.DimensionEnd} {
-		if dimension != source && dimension != target {
-			return dimension
-		}
-	}
-	return packet.DimensionOverworld
 }
 
 // remoteIP returns just the IP portion of a net.Addr, dropping the port. If it can't be split into host and
