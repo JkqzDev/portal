@@ -27,6 +27,10 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
+			if s.Transferring() || s.postTransfer.Load() {
+				s.log.Infof("TRACE client->server: %T", pk)
+			}
+
 			switch pk := pk.(type) {
 			case *packet.CommandRequest:
 				if handleCommandRequest(s, pk) {
@@ -87,6 +91,10 @@ func handlePackets(s *Session) {
 				continue
 			}
 			s.translatePacket(pk)
+
+			if s.Transferring() || s.postTransfer.Load() {
+				s.log.Infof("TRACE server->client: %T", pk)
+			}
 
 			switch pk := pk.(type) {
 			case *packet.AddActor:
