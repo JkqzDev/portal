@@ -317,6 +317,8 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
+		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
+
 		var w sync.WaitGroup
 		w.Add(2)
 		go func() {
