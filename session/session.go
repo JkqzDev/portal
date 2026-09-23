@@ -65,6 +65,7 @@ type Session struct {
 	postTransfer atomic.Bool
 	tracing      atomic.Bool
 	dead         atomic.Bool
+	closing      atomic.Bool
 	once         sync.Once
 
 	dimensionAck chan struct{}
@@ -416,6 +417,9 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 }
 
 func (s *Session) fallbackTransfer() bool {
+	if s.closing.Load() {
+		return false
+	}
 	fallback := s.loadBalancer.FindServer(s)
 	if fallback == nil || fallback == s.Server() {
 		return false
@@ -475,6 +479,7 @@ func anticheatLogger(l internal.Logger) *logrus.Logger {
 
 // Close closes the session and any linked connections/counters.
 func (s *Session) Close() {
+	s.closing.Store(true)
 	s.once.Do(func() {
 		if s.transferring.CAS(true, false) {
 			s.postTransfer.Store(false)
