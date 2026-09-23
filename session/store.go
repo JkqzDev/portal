@@ -61,13 +61,21 @@ func (s *Store) LoadFromName(x string) (*Session, bool) {
 	return v, ok
 }
 
-// Store stores the session on the proxy.
+// Store stores the session on the proxy. If a session for the same player UUID is already stored, it is
+// closed first so its backend connection doesn't linger after the new one takes over.
 func (s *Store) Store(x *Session) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	old, ok := s.sessions[x.UUID()]
+	s.mu.Unlock()
 
+	if ok && old != x {
+		old.Close()
+	}
+
+	s.mu.Lock()
 	s.sessions[x.UUID()] = x
 	s.sessionNames[x.Conn().IdentityData().DisplayName] = x
+	s.mu.Unlock()
 }
 
 // Delete deletes a session from the store.
