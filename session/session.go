@@ -30,10 +30,11 @@ import (
 type Session struct {
 	*translator
 
-	log   internal.Logger
-	conn  *minecraft.Conn
-	store *Store
-	bus   *event.Bus
+	log          internal.Logger
+	conn         *minecraft.Conn
+	store        *Store
+	bus          *event.Bus
+	loadBalancer LoadBalancer
 
 	ac *player.Player
 
@@ -69,10 +70,11 @@ type Session struct {
 // published for the session's lifecycle.
 func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log internal.Logger, bus *event.Bus) (s *Session, err error) {
 	s = &Session{
-		log:   log,
-		conn:  conn,
-		store: store,
-		bus:   bus,
+		log:          log,
+		conn:         conn,
+		store:        store,
+		bus:          bus,
+		loadBalancer: loadBalancer,
 
 		entities:    i64set.New(),
 		playerList:  b16set.New(),
@@ -398,6 +400,21 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 	})
 
 	return
+}
+
+// fallbackTransfer attempts to move the session to the server the load balancer would pick for a fresh
+// join, when the server it's currently on drops the connection. It returns false (doing nothing) if the
+// load balancer has no other server to offer, or offers the same server the session is already on.
+func (s *Session) fallbackTransfer() bool {
+	fallback := s.loadBalancer.FindServer(s)
+	if fallback == nil || fallback == s.Server() {
+		return false
+	}
+	if err := s.Transfer(fallback); err != nil {
+		s.log.Errorf("fallback transfer to %s failed for %s: %v", fallback.Name(), s.conn.IdentityData().DisplayName, err)
+		return false
+	}
+	return true
 }
 
 func (s *Session) completeTransfer(err error) {
