@@ -379,6 +379,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			s.ac.SetServerConn(conn)
 			s.ac.SetRuntimeID(gameData.EntityRuntimeID)
 			s.ac.SetUniqueID(gameData.EntityUniqueID)
+			s.ac.SetInDimensionChange(false)
 		}
 
 		s.serverMu.Lock()
@@ -560,6 +561,9 @@ func (s *Session) clearScoreboard() {
 }
 
 func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
+	if s.ac != nil {
+		s.ac.SetInDimensionChange(true)
+	}
 	_ = s.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: dimension,
 		Position:  pos,
