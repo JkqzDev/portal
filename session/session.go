@@ -301,10 +301,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 		s.serverMu.Lock()
 		currentDimension := s.serverConn.GameData().Dimension
-
 		oldServerConn := s.serverConn
-		s.serverConn = conn
-		s.updateTranslatorData(gameData)
 		s.serverMu.Unlock()
 
 		if currentDimension == gameData.Dimension {
@@ -313,15 +310,19 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			decoyPos := gameData.PlayerPosition.Add(mgl32.Vec3{100, 0, 100})
-			s.log.Infof("DEBUG %s: decoy dim=%d pos=%v currentDim=%d", s.conn.IdentityData().DisplayName, proxyDimension, decoyPos, currentDimension)
+			decoyPos := gameData.PlayerPosition.Add(mgl32.Vec3{0, 1, 0})
 			s.changeDimension(proxyDimension, decoyPos)
 			select {
 			case <-s.dimensionAck:
 			case <-time.After(250 * time.Millisecond):
 			}
 		}
-		s.log.Infof("DEBUG %s: real dim=%d pos=%v", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.PlayerPosition)
+
+		s.serverMu.Lock()
+		s.serverConn = conn
+		s.updateTranslatorData(gameData)
+		s.serverMu.Unlock()
+
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
