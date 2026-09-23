@@ -345,6 +345,10 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		_ = s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)})
 		_ = s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules})
 		_ = s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode})
+		_ = s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
+			Position: protocol.BlockPos{int32(gameData.PlayerPosition.X()), int32(gameData.PlayerPosition.Y()), int32(gameData.PlayerPosition.Z())},
+			Radius:   uint32(gameData.ChunkRadius) << 4,
+		})
 		radius := gameData.ChunkRadius
 		if radius < 1 {
 			radius = 1
@@ -492,7 +496,7 @@ func (s *Session) clearEntities() {
 
 // clearPlayerList flushes the playerList map and removes all the entries for the client.
 func (s *Session) clearPlayerList() {
-	var entries = make([]protocol.PlayerListEntry, s.playerList.Size())
+	var entries = make([]protocol.PlayerListEntry, 0, s.playerList.Size())
 	s.playerList.Each(func(uid [16]byte) bool {
 		entries = append(entries, protocol.PlayerListEntry{ActionType: protocol.PlayerListActionRemove, UUID: uid})
 		return true
@@ -546,7 +550,6 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 		Position:  pos,
 	})
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
-	_ = s.conn.WritePacket(&packet.PlayStatus{Status: packet.PlayStatusPlayerSpawn})
 	_ = s.conn.WritePacket(&packet.PlayerAction{EntityRuntimeID: s.originalRuntimeID, ActionType: protocol.PlayerActionDimensionChangeDone})
 }
 
