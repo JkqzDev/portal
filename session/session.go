@@ -68,7 +68,6 @@ type Session struct {
 // New creates a new Session with the provided connection. bus may be nil, in which case no events are
 // published for the session's lifecycle.
 func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log internal.Logger, bus *event.Bus) (s *Session, err error) {
-	log.Infof("TRACE new session: name=%s identity=%s xuid=%s addr=%s proto=%d", conn.IdentityData().DisplayName, conn.IdentityData().Identity, conn.IdentityData().XUID, conn.RemoteAddr(), conn.Proto().ID())
 	s = &Session{
 		log:   log,
 		conn:  conn,
