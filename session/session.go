@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -132,8 +133,10 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 		}
 
 		s.translator = newTranslator(srvConn.GameData())
-		s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
-		s.ac.Handle(anticheatHandler{s: s})
+		if os.Getenv("PORTAL_DISABLE_ANTICHEAT") != "1" {
+			s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
+			s.ac.Handle(anticheatHandler{s: s})
+		}
 		handlePackets(s)
 	}()
 	return s, nil
@@ -318,7 +321,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			s.changeDimension(proxyDimension, s.LastPosition())
 			select {
 			case <-s.dimensionAck:
-			case <-time.After(1500 * time.Millisecond):
+			case <-time.After(500 * time.Millisecond):
 			}
 		}
 		s.changeDimension(gameData.Dimension, s.LastPosition())
