@@ -152,7 +152,7 @@ func handlePackets(s *Session) {
 			}
 
 			if s.Transferring() {
-				s.queuePacket(conn, pk)
+				s.queuePacket(pk)
 				continue
 			}
 
