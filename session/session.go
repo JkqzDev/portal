@@ -313,7 +313,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			decoyPos := gameData.PlayerPosition.Add(mgl32.Vec3{100, 0, 100})
+			decoyPos := gameData.PlayerPosition.Add(mgl32.Vec3{2000, 0, 2000})
 			s.log.Infof("DEBUG %s: decoy dim=%d pos=%v currentDim=%d", s.conn.IdentityData().DisplayName, proxyDimension, decoyPos, currentDimension)
 			s.changeDimension(proxyDimension, decoyPos)
 			select {
