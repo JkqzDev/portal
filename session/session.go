@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -117,7 +118,8 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 			return
 		}
 		log.Infof("%s has been connected to server %s", conn.IdentityData().DisplayName, srv.Name())
-		log.Infof("DEBUG %s initial GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v", conn.IdentityData().DisplayName, srvConn.GameData().Dimension, srvConn.GameData().EntityRuntimeID, srvConn.GameData().EntityUniqueID, len(srvConn.GameData().CustomBlocks), len(srvConn.GameData().GameRules), srvConn.GameData().UseBlockNetworkIDHashes)
+		itemCount, itemSum := itemsFingerprint(srvConn.GameData().Items)
+		log.Infof("DEBUG %s initial GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v items=%d itemRuntimeIDSum=%d", conn.IdentityData().DisplayName, srvConn.GameData().Dimension, srvConn.GameData().EntityRuntimeID, srvConn.GameData().EntityUniqueID, len(srvConn.GameData().CustomBlocks), len(srvConn.GameData().GameRules), srvConn.GameData().UseBlockNetworkIDHashes, itemCount, itemSum)
 		if s.bus != nil {
 			s.bus.Publish(event.TopicPlayerJoin, event.PlayerPayload{UUID: s.uuid, Name: conn.IdentityData().DisplayName})
 		}
@@ -291,7 +293,8 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		}
 
 		gameData := conn.GameData()
-		s.log.Infof("DEBUG %s transfer target GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v chunkRadius=%d", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.EntityRuntimeID, gameData.EntityUniqueID, len(gameData.CustomBlocks), len(gameData.GameRules), gameData.UseBlockNetworkIDHashes, gameData.ChunkRadius)
+		itemCount, itemSum := itemsFingerprint(gameData.Items)
+		s.log.Infof("DEBUG %s transfer target GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v chunkRadius=%d items=%d itemRuntimeIDSum=%d", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.EntityRuntimeID, gameData.EntityUniqueID, len(gameData.CustomBlocks), len(gameData.GameRules), gameData.UseBlockNetworkIDHashes, gameData.ChunkRadius, itemCount, itemSum)
 
 		s.serverMu.Lock()
 		currentDimension := s.serverConn.GameData().Dimension
@@ -408,6 +411,16 @@ func (s *Session) handler() Handler {
 	s.hMutex.RLock()
 	defer s.hMutex.RUnlock()
 	return s.h
+}
+
+func itemsFingerprint(items []protocol.ItemEntry) (count int, runtimeIDSum int64) {
+	sorted := make([]protocol.ItemEntry, len(items))
+	copy(sorted, items)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	for _, it := range sorted {
+		runtimeIDSum += int64(it.RuntimeID)
+	}
+	return len(sorted), runtimeIDSum
 }
 
 func anticheatLogger(l internal.Logger) *logrus.Logger {
