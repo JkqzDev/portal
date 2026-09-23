@@ -313,12 +313,14 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
+			s.log.Infof("DEBUG %s: decoy dim=%d pos=%v currentDim=%d", s.conn.IdentityData().DisplayName, proxyDimension, gameData.PlayerPosition, currentDimension)
 			s.changeDimension(proxyDimension, gameData.PlayerPosition)
 			select {
 			case <-s.dimensionAck:
 			case <-time.After(250 * time.Millisecond):
 			}
 		}
+		s.log.Infof("DEBUG %s: real dim=%d pos=%v", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.PlayerPosition)
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
