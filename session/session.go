@@ -320,7 +320,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			case <-time.After(1500 * time.Millisecond):
 			}
 		}
-		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
+		s.changeDimension(gameData.Dimension, s.LastPosition())
 		s.setLastPosition(gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
@@ -344,7 +344,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			Position:        gameData.PlayerPosition,
 			Pitch:           gameData.Pitch,
 			Yaw:             gameData.Yaw,
-			Mode:            packet.MoveModeReset,
+			Mode:            packet.MoveModeTeleport,
 		})
 		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000})
 		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm})
