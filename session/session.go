@@ -50,6 +50,9 @@ type Session struct {
 	tempServerConn *minecraft.Conn
 	transferDone   func(error)
 
+	posMu   sync.Mutex
+	lastPos mgl32.Vec3
+
 	entities    *i64set.Set
 	playerList  *b16set.Set
 	effects     *i32set.Set
@@ -122,6 +125,7 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 			return
 		}
 		log.Infof("%s has been connected to server %s", conn.IdentityData().DisplayName, srv.Name())
+		s.setLastPosition(srvConn.GameData().PlayerPosition)
 		if s.bus != nil {
 			s.bus.Publish(event.TopicPlayerJoin, event.PlayerPayload{UUID: s.uuid, Name: conn.IdentityData().DisplayName})
 		}
@@ -310,13 +314,14 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			s.changeDimension(proxyDimension, gameData.PlayerPosition)
+			s.changeDimension(proxyDimension, s.LastPosition())
 			select {
 			case <-s.dimensionAck:
 			case <-time.After(1500 * time.Millisecond):
 			}
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
+		s.setLastPosition(gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
 
@@ -432,6 +437,18 @@ func (s *Session) Transferring() bool {
 // setTransferring sets if the session is transferring to a different server.
 func (s *Session) setTransferring(v bool) {
 	s.transferring.Store(v)
+}
+
+func (s *Session) setLastPosition(pos mgl32.Vec3) {
+	s.posMu.Lock()
+	s.lastPos = pos
+	s.posMu.Unlock()
+}
+
+func (s *Session) LastPosition() mgl32.Vec3 {
+	s.posMu.Lock()
+	defer s.posMu.Unlock()
+	return s.lastPos
 }
 
 // handler() returns the handler connected to the session.

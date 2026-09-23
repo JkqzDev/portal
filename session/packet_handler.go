@@ -32,6 +32,8 @@ func handlePackets(s *Session) {
 				if handleCommandRequest(s, pk) {
 					continue
 				}
+			case *packet.PlayerAuthInput:
+				s.setLastPosition(pk.Position)
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
 					select {
