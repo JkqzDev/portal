@@ -402,9 +402,6 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 	return
 }
 
-// fallbackTransfer attempts to move the session to the server the load balancer would pick for a fresh
-// join, when the server it's currently on drops the connection. It returns false (doing nothing) if the
-// load balancer has no other server to offer, or offers the same server the session is already on.
 func (s *Session) fallbackTransfer() bool {
 	fallback := s.loadBalancer.FindServer(s)
 	if fallback == nil || fallback == s.Server() {
