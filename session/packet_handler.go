@@ -34,9 +34,6 @@ func handlePackets(s *Session) {
 				}
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
-					if s.ac != nil {
-						s.ac.Process(pk, true)
-					}
 					select {
 					case s.dimensionAck <- struct{}{}:
 					default:
