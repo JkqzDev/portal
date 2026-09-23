@@ -19,6 +19,7 @@ func handlePackets(s *Session) {
 		for {
 			pk, err := s.Conn().ReadPacket()
 			if err != nil {
+				s.log.Infof("TRACE client connection closed: %v (closed=%v)", err, errors.Is(err, net.ErrClosed))
 				if !errors.Is(err, net.ErrClosed) {
 					s.log.Errorf("failed to read packet from connection: %v", err)
 				}
@@ -27,7 +28,7 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
-			if s.Transferring() || s.postTransfer.Load() {
+			if s.Transferring() || s.tracing.Load() {
 				s.log.Infof("TRACE client->server: %T", pk)
 			}
 
@@ -92,7 +93,7 @@ func handlePackets(s *Session) {
 			}
 			s.translatePacket(pk)
 
-			if s.Transferring() || s.postTransfer.Load() {
+			if s.Transferring() || s.tracing.Load() {
 				s.log.Infof("TRACE server->client: %T", pk)
 			}
 
