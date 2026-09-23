@@ -117,6 +117,7 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 			return
 		}
 		log.Infof("%s has been connected to server %s", conn.IdentityData().DisplayName, srv.Name())
+		log.Infof("DEBUG %s initial GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v", conn.IdentityData().DisplayName, srvConn.GameData().Dimension, srvConn.GameData().EntityRuntimeID, srvConn.GameData().EntityUniqueID, len(srvConn.GameData().CustomBlocks), len(srvConn.GameData().GameRules), srvConn.GameData().UseBlockNetworkIDHashes)
 		if s.bus != nil {
 			s.bus.Publish(event.TopicPlayerJoin, event.PlayerPayload{UUID: s.uuid, Name: conn.IdentityData().DisplayName})
 		}
@@ -290,6 +291,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		}
 
 		gameData := conn.GameData()
+		s.log.Infof("DEBUG %s transfer target GameData: dimension=%d entityRuntimeID=%d entityUniqueID=%d customBlocks=%d gameRules=%d useBlockHashes=%v chunkRadius=%d", s.conn.IdentityData().DisplayName, gameData.Dimension, gameData.EntityRuntimeID, gameData.EntityUniqueID, len(gameData.CustomBlocks), len(gameData.GameRules), gameData.UseBlockNetworkIDHashes, gameData.ChunkRadius)
 
 		s.serverMu.Lock()
 		currentDimension := s.serverConn.GameData().Dimension
