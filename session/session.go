@@ -383,7 +383,6 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			s.ac.SetServerConn(conn)
 			s.ac.SetRuntimeID(gameData.EntityRuntimeID)
 			s.ac.SetUniqueID(gameData.EntityUniqueID)
-			s.ac.SetInDimensionChange(false)
 		}
 
 		s.serverMu.Lock()
@@ -395,8 +394,11 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		s.setTransferring(false)
 		s.postTransfer.Store(true)
 		go func() {
-			time.Sleep(5 * time.Second)
+			time.Sleep(30 * time.Second)
 			s.postTransfer.Store(false)
+			if s.ac != nil {
+				s.ac.SetInDimensionChange(false)
+			}
 		}()
 		s.log.Infof("%s finished transferring to %s", s.conn.IdentityData().DisplayName, srv.Name())
 		s.completeTransfer(nil)
