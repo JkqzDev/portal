@@ -61,6 +61,7 @@ type Session struct {
 	transferring atomic.Bool
 	postTransfer atomic.Bool
 	dead         atomic.Bool
+	transferGen  atomic.Uint64
 	once         sync.Once
 
 	dimensionAck chan struct{}
@@ -223,6 +224,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		return errors.New("already being transferred")
 	}
 	s.postTransfer.Store(false)
+	gen := s.transferGen.Add(1)
 
 	fromName := s.Server().Name()
 	s.log.Infof("%s is being transferred from %s to %s", s.conn.IdentityData().DisplayName, fromName, srv.Name())
@@ -389,6 +391,14 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		go func() {
 			time.Sleep(5 * time.Second)
 			s.postTransfer.Store(false)
+		}()
+		go func() {
+			time.Sleep(20 * time.Second)
+			if s.transferGen.Load() != gen || s.Transferring() {
+				return
+			}
+			s.log.Errorf("%s appears stuck after transferring to %s, falling back", s.conn.IdentityData().DisplayName, srv.Name())
+			s.fallbackTransfer()
 		}()
 		s.log.Infof("%s finished transferring to %s", s.conn.IdentityData().DisplayName, srv.Name())
 		s.completeTransfer(nil)
