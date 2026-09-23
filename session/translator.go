@@ -42,8 +42,6 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.ActorPickRequest:
 		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	case *packet.AddActor:
-		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
 		for i := range pk.EntityLinks {
 			pk.EntityLinks[i] = t.translateEntityLink(pk.EntityLinks[i])
@@ -51,15 +49,8 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.AgentAnimation:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.AddItemActor:
-		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
-	case *packet.AddPainting:
-		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.AddPlayer:
-		pk.AbilityData.EntityUniqueID = t.translateUniqueID(pk.AbilityData.EntityUniqueID)
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
 		for i := range pk.EntityLinks {
 			pk.EntityLinks[i] = t.translateEntityLink(pk.EntityLinks[i])
@@ -163,8 +154,6 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		for i := range pk.Entries {
 			pk.Entries[i].EntityUniqueID = t.translateUniqueID(pk.Entries[i].EntityUniqueID)
 		}
-	case *packet.RemoveActor:
-		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	case *packet.RemoveVolumeEntity:
 		pk.EntityRuntimeID = t.translateRuntimeID32(pk.EntityRuntimeID)
 	case *packet.Respawn:
