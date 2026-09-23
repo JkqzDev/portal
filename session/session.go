@@ -350,9 +350,8 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		_ = s.serverConn.Close()
 
 		s.serverConn = conn
-		s.serverMu.Unlock()
-
 		s.updateTranslatorData(gameData)
+		s.serverMu.Unlock()
 
 		if s.ac != nil {
 			s.ac.SetServerConn(s.serverConn)
