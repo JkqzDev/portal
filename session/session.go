@@ -298,6 +298,12 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 		s.serverMu.Lock()
 		currentDimension := s.serverConn.GameData().Dimension
+
+		oldServerConn := s.serverConn
+		s.serverConn = conn
+		s.updateTranslatorData(gameData)
+		s.serverMu.Unlock()
+
 		if currentDimension == gameData.Dimension {
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
 			s.changeDimension(proxyDimension, gameData.PlayerPosition)
@@ -347,17 +353,13 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		w.Wait()
 		_ = s.conn.Flush()
 
-		_ = s.serverConn.WritePacket(&packet.Disconnect{
+		_ = oldServerConn.WritePacket(&packet.Disconnect{
 			Message: "Server transfer",
 		})
-		_ = s.serverConn.Close()
-
-		s.serverConn = conn
-		s.updateTranslatorData(gameData)
-		s.serverMu.Unlock()
+		_ = oldServerConn.Close()
 
 		if s.ac != nil {
-			s.ac.SetServerConn(s.serverConn)
+			s.ac.SetServerConn(conn)
 			s.ac.SetRuntimeID(gameData.EntityRuntimeID)
 			s.ac.SetUniqueID(gameData.EntityUniqueID)
 		}
