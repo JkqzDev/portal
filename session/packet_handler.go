@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"net"
+	"time"
 
 	"github.com/paroxity/portal/event"
 	"github.com/sandertv/gophertunnel/minecraft"
@@ -157,6 +158,10 @@ func handlePackets(s *Session) {
 			ctx.Continue(func() {
 				_ = s.Conn().WritePacket(pk)
 			})
+
+			if _, ok := pk.(*packet.LevelChunk); ok {
+				time.Sleep(2 * time.Millisecond)
+			}
 		}
 	}()
 }
