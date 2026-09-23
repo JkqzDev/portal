@@ -402,6 +402,9 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		go func() {
 			time.Sleep(30 * time.Second)
 			s.postTransfer.Store(false)
+			if s.ac != nil {
+				s.ac.SetInDimensionChange(false)
+			}
 		}()
 		s.log.Infof("%s finished transferring to %s", s.conn.IdentityData().DisplayName, srv.Name())
 		s.completeTransfer(nil)
@@ -588,6 +591,9 @@ func (s *Session) clearScoreboard() {
 }
 
 func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
+	if s.ac != nil {
+		s.ac.SetInDimensionChange(true)
+	}
 	_ = s.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: dimension,
 		Position:  pos,
