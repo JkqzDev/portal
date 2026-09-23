@@ -65,6 +65,7 @@ type Session struct {
 	postTransfer atomic.Bool
 	dead         atomic.Bool
 	closing      atomic.Bool
+	swapped      atomic.Bool
 	once         sync.Once
 
 	dimensionAck chan struct{}
@@ -229,6 +230,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		return errors.New("already being transferred")
 	}
 	s.postTransfer.Store(false)
+	s.swapped.Store(false)
 
 	fromName := s.Server().Name()
 	s.log.Infof("%s is being transferred from %s to %s", s.conn.IdentityData().DisplayName, fromName, srv.Name())
@@ -326,6 +328,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		s.serverMu.Lock()
 		s.serverConn = conn
 		s.updateTranslatorData(gameData)
+		s.swapped.Store(true)
 		s.serverMu.Unlock()
 
 		_ = oldServerConn.WritePacket(&packet.Disconnect{
@@ -451,7 +454,10 @@ func (s *Session) setTransferring(v bool) {
 	s.transferring.Store(v)
 }
 
-func (s *Session) queuePacket(pk packet.Packet) {
+func (s *Session) queuePacket(from *minecraft.Conn, pk packet.Packet) {
+	if !s.swapped.Load() || from != s.ServerConn() {
+		return
+	}
 	s.queuedMu.Lock()
 	s.queued = append(s.queued, pk)
 	s.queuedMu.Unlock()
