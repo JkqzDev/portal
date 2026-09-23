@@ -327,14 +327,12 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		_ = s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)})
 		_ = s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules})
 		_ = s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode})
-		_ = s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
-			Position: protocol.BlockPos{
-				int32(gameData.PlayerPosition.X()),
-				int32(gameData.PlayerPosition.Y()),
-				int32(gameData.PlayerPosition.Z()),
-			},
-			Radius: uint32(gameData.ChunkRadius) << 4,
-		})
+		radius := gameData.ChunkRadius
+		if radius < 1 {
+			radius = 1
+		}
+		_ = conn.WritePacket(&packet.RequestChunkRadius{ChunkRadius: radius, MaxChunkRadius: uint8(radius)})
+
 		if s.dead.CAS(true, false) {
 			_ = s.conn.WritePacket(&packet.Respawn{
 				Position:        gameData.PlayerPosition,
