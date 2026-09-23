@@ -56,6 +56,9 @@ type Session struct {
 	bossBars    *i64set.Set
 	scoreboards *strset.Set
 
+	queuedMu sync.Mutex
+	queued   []packet.Packet
+
 	uuid uuid.UUID
 
 	transferring atomic.Bool
@@ -285,6 +288,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			if err != nil {
 				s.log.Errorf("transfer failed: could not dial %s: %v", srv.Name(), err)
 				s.setTransferring(false)
+				s.flushQueuedPackets()
 				s.completeTransfer(err)
 				return
 			}
@@ -293,6 +297,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			_ = conn.Close()
 			s.log.Errorf("transfer failed: spawn timeout on %s: %v", srv.Name(), err)
 			s.setTransferring(false)
+			s.flushQueuedPackets()
 			s.completeTransfer(err)
 			return
 		}
@@ -392,6 +397,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		s.serverMu.Unlock()
 
 		s.setTransferring(false)
+		s.flushQueuedPackets()
 		s.postTransfer.Store(true)
 		go func() {
 			time.Sleep(30 * time.Second)
@@ -406,6 +412,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 	ctx.Stop(func() {
 		s.setTransferring(false)
+		s.flushQueuedPackets()
 		s.completeTransfer(errors.New("transfer cancelled"))
 	})
 
@@ -445,6 +452,23 @@ func (s *Session) Transferring() bool {
 // setTransferring sets if the session is transferring to a different server.
 func (s *Session) setTransferring(v bool) {
 	s.transferring.Store(v)
+}
+
+func (s *Session) queuePacket(pk packet.Packet) {
+	s.queuedMu.Lock()
+	s.queued = append(s.queued, pk)
+	s.queuedMu.Unlock()
+}
+
+func (s *Session) flushQueuedPackets() {
+	s.queuedMu.Lock()
+	pks := s.queued
+	s.queued = nil
+	s.queuedMu.Unlock()
+
+	for _, pk := range pks {
+		_ = s.conn.WritePacket(pk)
+	}
 }
 
 // handler() returns the handler connected to the session.

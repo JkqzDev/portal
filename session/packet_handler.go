@@ -154,6 +154,11 @@ func handlePackets(s *Session) {
 				continue
 			}
 
+			if s.Transferring() {
+				s.queuePacket(pk)
+				continue
+			}
+
 			ctx := event.C()
 			s.handler().HandleClientBoundPacket(ctx, pk)
 
