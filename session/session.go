@@ -307,6 +307,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		if currentDimension == gameData.Dimension {
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
 			s.changeDimension(proxyDimension, gameData.PlayerPosition)
+			time.Sleep(250 * time.Millisecond)
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
