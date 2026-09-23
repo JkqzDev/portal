@@ -296,20 +296,24 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		gameData := conn.GameData()
 
 		s.serverMu.Lock()
+		currentDimension := s.serverConn.GameData().Dimension
+
 		oldServerConn := s.serverConn
 		s.serverConn = conn
 		s.updateTranslatorData(gameData)
 		s.serverMu.Unlock()
 
-		select {
-		case <-s.dimensionAck:
-		default:
-		}
-		fakePosition := gameData.PlayerPosition.Add(mgl32.Vec3{2000, 0, 2000})
-		s.changeDimension(gameData.Dimension, fakePosition)
-		select {
-		case <-s.dimensionAck:
-		case <-time.After(500 * time.Millisecond):
+		if currentDimension == gameData.Dimension {
+			select {
+			case <-s.dimensionAck:
+			default:
+			}
+			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
+			s.changeDimension(proxyDimension, gameData.PlayerPosition)
+			select {
+			case <-s.dimensionAck:
+			case <-time.After(500 * time.Millisecond):
+			}
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
@@ -538,6 +542,15 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
 	_ = s.conn.WritePacket(&packet.PlayStatus{Status: packet.PlayStatusPlayerSpawn})
 	_ = s.conn.WritePacket(&packet.PlayerAction{EntityRuntimeID: s.originalRuntimeID, ActionType: protocol.PlayerActionDimensionChangeDone})
+}
+
+func selectProxyDimension(source, target int32) int32 {
+	for _, dimension := range []int32{packet.DimensionOverworld, packet.DimensionNether, packet.DimensionEnd} {
+		if dimension != source && dimension != target {
+			return dimension
+		}
+	}
+	return packet.DimensionOverworld
 }
 
 // remoteIP returns just the IP portion of a net.Addr, dropping the port. If it can't be split into host and
