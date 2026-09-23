@@ -3,7 +3,6 @@ package session
 import (
 	"errors"
 	"net"
-	"sync"
 
 	"github.com/paroxity/portal/event"
 	"github.com/sandertv/gophertunnel/minecraft"
@@ -28,8 +27,6 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
-			s.log.Infof("DEBUG client->server packet: %T", pk)
-
 			switch pk := pk.(type) {
 			case *packet.CommandRequest:
 				if handleCommandRequest(s, pk) {
@@ -37,107 +34,7 @@ func handlePackets(s *Session) {
 				}
 			case *packet.PlayerAction:
 				if pk.ActionType == protocol.PlayerActionDimensionChangeDone {
-					if s.transferring.Load() {
-						s.serverMu.Lock()
-						gameData := s.tempServerConn.GameData()
-						s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
-
-						var w sync.WaitGroup
-						w.Add(2)
-						go func() {
-							s.clearEntities()
-							s.clearEffects()
-							w.Done()
-						}()
-						go func() {
-							s.clearPlayerList()
-							s.clearBossBars()
-							s.clearScoreboard()
-							w.Done()
-						}()
-
-						if err := s.conn.WritePacket(&packet.MovePlayer{
-							EntityRuntimeID: s.originalRuntimeID,
-							Position:        gameData.PlayerPosition,
-							Pitch:           gameData.Pitch,
-							Yaw:             gameData.Yaw,
-							Mode:            packet.MoveModeReset,
-						}); err != nil {
-							s.log.Errorf("DEBUG write MovePlayer: %v", err)
-						}
-
-						if err := s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000}); err != nil {
-							s.log.Errorf("DEBUG write LevelEvent stoprain: %v", err)
-						}
-						if err := s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm}); err != nil {
-							s.log.Errorf("DEBUG write LevelEvent stopthunder: %v", err)
-						}
-						if err := s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)}); err != nil {
-							s.log.Errorf("DEBUG write SetDifficulty: %v", err)
-						}
-						if err := s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules}); err != nil {
-							s.log.Errorf("DEBUG write GameRulesChanged: %v", err)
-						}
-						if err := s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode}); err != nil {
-							s.log.Errorf("DEBUG write SetPlayerGameType: %v", err)
-						}
-
-						if err := s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
-							Position: protocol.BlockPos{
-								int32(gameData.PlayerPosition.X()),
-								int32(gameData.PlayerPosition.Y()),
-								int32(gameData.PlayerPosition.Z()),
-							},
-							Radius: uint32(gameData.ChunkRadius) << 4,
-						}); err != nil {
-							s.log.Errorf("DEBUG write NetworkChunkPublisherUpdate: %v", err)
-						}
-
-						if s.dead.CAS(true, false) {
-							if err := s.conn.WritePacket(&packet.Respawn{
-								Position:        gameData.PlayerPosition,
-								State:           packet.RespawnStateReadyToSpawn,
-								EntityRuntimeID: s.originalRuntimeID,
-							}); err != nil {
-								s.log.Errorf("DEBUG write Respawn: %v", err)
-							}
-						}
-
-						w.Wait()
-						if err := s.conn.Flush(); err != nil {
-							s.log.Errorf("DEBUG flush: %v", err)
-						}
-						s.log.Infof("DEBUG transfer completion sequence flushed for %s", s.Conn().IdentityData().DisplayName)
-
-						// Send a Disconnect packet before closing so the downstream server
-						// (e.g. GeyserMC → Spigot) immediately cleans up the player session
-						// instead of waiting for a Raknet timeout.
-						_ = s.serverConn.WritePacket(&packet.Disconnect{
-							Message: "Server transfer",
-						})
-						_ = s.serverConn.Close()
-
-						s.serverConn = s.tempServerConn
-						s.tempServerConn = nil
-						s.serverMu.Unlock()
-
-						s.updateTranslatorData(gameData)
-
-						if s.ac != nil {
-							s.ac.SetServerConn(s.serverConn)
-							s.ac.SetRuntimeID(gameData.EntityRuntimeID)
-							s.ac.SetUniqueID(gameData.EntityUniqueID)
-						}
-
-						s.transferring.Store(false)
-						s.postTransfer.Store(true)
-
-						s.log.Infof("%s finished transferring to %s", s.Conn().IdentityData().DisplayName, s.Server().Name())
-						s.completeTransfer(nil)
-						continue
-					} else if s.postTransfer.CAS(true, false) {
-						continue
-					}
+					continue
 				}
 			}
 

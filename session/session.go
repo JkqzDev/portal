@@ -289,39 +289,91 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			return
 		}
 
+		gameData := conn.GameData()
+
 		s.serverMu.Lock()
-		s.tempServerConn = conn
+		currentDimension := s.serverConn.GameData().Dimension
+		if currentDimension == gameData.Dimension {
+			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
+			s.changeDimension(proxyDimension, gameData.PlayerPosition)
+		}
+		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
+
+		var w sync.WaitGroup
+		w.Add(2)
+		go func() {
+			s.clearEntities()
+			s.clearEffects()
+			w.Done()
+		}()
+		go func() {
+			s.clearPlayerList()
+			s.clearBossBars()
+			s.clearScoreboard()
+			w.Done()
+		}()
+
+		_ = s.conn.WritePacket(&packet.MovePlayer{
+			EntityRuntimeID: s.originalRuntimeID,
+			Position:        gameData.PlayerPosition,
+			Pitch:           gameData.Pitch,
+			Yaw:             gameData.Yaw,
+			Mode:            packet.MoveModeReset,
+		})
+		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000})
+		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm})
+		_ = s.conn.WritePacket(&packet.SetDifficulty{Difficulty: uint32(gameData.Difficulty)})
+		_ = s.conn.WritePacket(&packet.GameRulesChanged{GameRules: gameData.GameRules})
+		_ = s.conn.WritePacket(&packet.SetPlayerGameType{GameType: gameData.PlayerGameMode})
+		_ = s.conn.WritePacket(&packet.NetworkChunkPublisherUpdate{
+			Position: protocol.BlockPos{
+				int32(gameData.PlayerPosition.X()),
+				int32(gameData.PlayerPosition.Y()),
+				int32(gameData.PlayerPosition.Z()),
+			},
+			Radius: uint32(gameData.ChunkRadius) << 4,
+		})
+		if s.dead.CAS(true, false) {
+			_ = s.conn.WritePacket(&packet.Respawn{
+				Position:        gameData.PlayerPosition,
+				State:           packet.RespawnStateReadyToSpawn,
+				EntityRuntimeID: s.originalRuntimeID,
+			})
+		}
+
+		w.Wait()
+		_ = s.conn.Flush()
+
+		_ = s.serverConn.WritePacket(&packet.Disconnect{
+			Message: "Server transfer",
+		})
+		_ = s.serverConn.Close()
+
+		s.serverConn = conn
 		s.serverMu.Unlock()
 
-		proxyDimension := selectProxyDimension(s.serverConn.GameData().Dimension, conn.GameData().Dimension)
+		s.updateTranslatorData(gameData)
 
-		pos := s.conn.GameData().PlayerPosition
-		s.changeDimension(proxyDimension, pos)
-
-		chunkX := int32(pos.X()) >> 4
-		chunkZ := int32(pos.Z()) >> 4
-		for x := int32(-2); x <= 2; x++ {
-			for z := int32(-2); z <= 2; z++ {
-				if err := s.conn.WritePacket(&packet.LevelChunk{
-					Position:      protocol.ChunkPos{chunkX + x, chunkZ + z},
-					Dimension:     proxyDimension,
-					SubChunkCount: 1,
-					RawPayload:    emptyChunk(proxyDimension, true),
-				}); err != nil {
-					s.log.Errorf("DEBUG write placeholder LevelChunk: %v", err)
-				}
-			}
+		if s.ac != nil {
+			s.ac.SetServerConn(s.serverConn)
+			s.ac.SetRuntimeID(gameData.EntityRuntimeID)
+			s.ac.SetUniqueID(gameData.EntityUniqueID)
 		}
-		if err := s.conn.Flush(); err != nil {
-			s.log.Errorf("DEBUG flush placeholder chunks: %v", err)
-		}
-		s.log.Infof("DEBUG placeholder chunks + changeDimension(%d) flushed for %s", proxyDimension, s.conn.IdentityData().DisplayName)
 
 		s.serverMu.Lock()
 		s.server.DecrementPlayerCount()
 		s.server = srv
 		s.server.IncrementPlayerCount()
 		s.serverMu.Unlock()
+
+		s.setTransferring(false)
+		s.postTransfer.Store(true)
+		go func() {
+			time.Sleep(5 * time.Second)
+			s.postTransfer.Store(false)
+		}()
+		s.log.Infof("%s finished transferring to %s", s.conn.IdentityData().DisplayName, srv.Name())
+		s.completeTransfer(nil)
 	})
 
 	ctx.Stop(func() {
