@@ -313,10 +313,10 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			s.changeDimension(proxyDimension, gameData.PlayerPosition)
+			s.changeDimension(proxyDimension, s.conn.GameData().PlayerPosition)
 			select {
 			case <-s.dimensionAck:
-			case <-time.After(1500 * time.Millisecond):
+			case <-time.After(30 * time.Second):
 			}
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
@@ -339,17 +339,10 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 		_ = s.conn.WritePacket(&packet.MovePlayer{
 			EntityRuntimeID: s.originalRuntimeID,
-			Position:        gameData.PlayerPosition.Add(mgl32.Vec3{0, 0.01}),
-			Pitch:           gameData.Pitch,
-			Yaw:             gameData.Yaw,
-			Mode:            packet.MoveModeTeleport,
-		})
-		_ = s.conn.WritePacket(&packet.MovePlayer{
-			EntityRuntimeID: s.originalRuntimeID,
 			Position:        gameData.PlayerPosition,
 			Pitch:           gameData.Pitch,
 			Yaw:             gameData.Yaw,
-			Mode:            packet.MoveModeTeleport,
+			Mode:            packet.MoveModeReset,
 		})
 		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopRaining, EventData: 10000})
 		_ = s.conn.WritePacket(&packet.LevelEvent{EventType: packet.LevelEventStopThunderstorm})
