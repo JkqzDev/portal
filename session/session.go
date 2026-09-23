@@ -323,6 +323,11 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		s.updateTranslatorData(gameData)
 		s.serverMu.Unlock()
 
+		_ = oldServerConn.WritePacket(&packet.Disconnect{
+			Message: "Server transfer",
+		})
+		_ = oldServerConn.Close()
+
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
@@ -373,11 +378,6 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 		w.Wait()
 		_ = s.conn.Flush()
-
-		_ = oldServerConn.WritePacket(&packet.Disconnect{
-			Message: "Server transfer",
-		})
-		_ = oldServerConn.Close()
 
 		if s.ac != nil {
 			s.ac.SetServerConn(conn)
