@@ -81,10 +81,6 @@ func handlePackets(s *Session) {
 				c := false
 				ctx.Continue(func() {
 					c = true
-					if s.fallbackTransfer() {
-						c = false
-						return
-					}
 					if disconnect, ok := errors.Unwrap(err).(minecraft.DisconnectError); ok {
 						s.log.Debugf(disconnect.Error())
 						_ = s.conn.WritePacket(&packet.Disconnect{Message: disconnect.Error()})
