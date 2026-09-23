@@ -313,7 +313,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			s.changeDimension(proxyDimension, gameData.PlayerPosition)
 			select {
 			case <-s.dimensionAck:
-			case <-time.After(500 * time.Millisecond):
+			case <-time.After(1500 * time.Millisecond):
 			}
 		}
 		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
