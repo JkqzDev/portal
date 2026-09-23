@@ -50,9 +50,6 @@ type Session struct {
 	tempServerConn *minecraft.Conn
 	transferDone   func(error)
 
-	posMu   sync.Mutex
-	lastPos mgl32.Vec3
-
 	entities    *i64set.Set
 	playerList  *b16set.Set
 	effects     *i32set.Set
@@ -126,7 +123,6 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 			return
 		}
 		log.Infof("%s has been connected to server %s", conn.IdentityData().DisplayName, srv.Name())
-		s.setLastPosition(srvConn.GameData().PlayerPosition)
 		if s.bus != nil {
 			s.bus.Publish(event.TopicPlayerJoin, event.PlayerPayload{UUID: s.uuid, Name: conn.IdentityData().DisplayName})
 		}
@@ -317,14 +313,13 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			default:
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
-			s.changeDimension(proxyDimension, s.LastPosition())
+			s.changeDimension(proxyDimension, gameData.PlayerPosition)
 			select {
 			case <-s.dimensionAck:
-			case <-time.After(500 * time.Millisecond):
+			case <-time.After(1500 * time.Millisecond):
 			}
 		}
-		s.changeDimension(gameData.Dimension, s.LastPosition())
-		s.setLastPosition(gameData.PlayerPosition)
+		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
 
@@ -342,6 +337,13 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			w.Done()
 		}()
 
+		_ = s.conn.WritePacket(&packet.MovePlayer{
+			EntityRuntimeID: s.originalRuntimeID,
+			Position:        gameData.PlayerPosition.Add(mgl32.Vec3{0, 0.01}),
+			Pitch:           gameData.Pitch,
+			Yaw:             gameData.Yaw,
+			Mode:            packet.MoveModeTeleport,
+		})
 		_ = s.conn.WritePacket(&packet.MovePlayer{
 			EntityRuntimeID: s.originalRuntimeID,
 			Position:        gameData.PlayerPosition,
@@ -443,18 +445,6 @@ func (s *Session) Transferring() bool {
 // setTransferring sets if the session is transferring to a different server.
 func (s *Session) setTransferring(v bool) {
 	s.transferring.Store(v)
-}
-
-func (s *Session) setLastPosition(pos mgl32.Vec3) {
-	s.posMu.Lock()
-	s.lastPos = pos
-	s.posMu.Unlock()
-}
-
-func (s *Session) LastPosition() mgl32.Vec3 {
-	s.posMu.Lock()
-	defer s.posMu.Unlock()
-	return s.lastPos
 }
 
 // handler() returns the handler connected to the session.
