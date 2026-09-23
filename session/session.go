@@ -57,10 +57,11 @@ type Session struct {
 
 	uuid uuid.UUID
 
-	transferring atomic.Bool
-	postTransfer atomic.Bool
-	dead         atomic.Bool
-	once         sync.Once
+	transferring    atomic.Bool
+	postTransfer    atomic.Bool
+	dead            atomic.Bool
+	loadingScreenID atomic.Uint32
+	once            sync.Once
 }
 
 // New creates a new Session with the provided connection. bus may be nil, in which case no events are
@@ -473,8 +474,9 @@ func (s *Session) clearScoreboard() {
 
 func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 	_ = s.conn.WritePacket(&packet.ChangeDimension{
-		Dimension: dimension,
-		Position:  pos,
+		Dimension:       dimension,
+		Position:        pos,
+		LoadingScreenID: protocol.Option(s.loadingScreenID.Add(1)),
 	})
 	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
 	_ = s.conn.WritePacket(&packet.PlayerAction{ActionType: protocol.PlayerActionDimensionChangeDone})
