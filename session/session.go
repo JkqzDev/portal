@@ -63,6 +63,7 @@ type Session struct {
 
 	transferring atomic.Bool
 	postTransfer atomic.Bool
+	tracing      atomic.Bool
 	dead         atomic.Bool
 	once         sync.Once
 
@@ -391,6 +392,11 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 
 		s.setTransferring(false)
 		s.postTransfer.Store(true)
+		s.tracing.Store(true)
+		go func() {
+			time.Sleep(60 * time.Second)
+			s.tracing.Store(false)
+		}()
 		go func() {
 			time.Sleep(5 * time.Second)
 			s.postTransfer.Store(false)
