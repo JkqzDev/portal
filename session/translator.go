@@ -37,8 +37,6 @@ func (t *translator) updateTranslatorData(data minecraft.GameData) {
 // process is not done, weird things would happen visually on the client.
 func (t *translator) translatePacket(pk packet.Packet) {
 	switch pk := pk.(type) {
-	case *packet.ActorEvent:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.ActorPickRequest:
 		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	case *packet.AddActor:
@@ -59,12 +57,6 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		pk.EntityRuntimeID = t.translateRuntimeID32(pk.EntityRuntimeID)
 	case *packet.AdventureSettings:
 		pk.PlayerUniqueID = t.translateUniqueID(pk.PlayerUniqueID)
-	case *packet.Animate:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
-	case *packet.AnimateEntity:
-		for i := range pk.EntityRuntimeIDs {
-			pk.EntityRuntimeIDs[i] = t.translateRuntimeID(pk.EntityRuntimeIDs[i])
-		}
 	case *packet.BossEvent:
 		pk.BossEntityUniqueID = t.translateUniqueID(pk.BossEntityUniqueID)
 	case *packet.Camera:
@@ -121,17 +113,9 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		case *protocol.UseItemOnEntityTransactionData:
 			data.TargetEntityRuntimeID = t.translateRuntimeID(data.TargetEntityRuntimeID)
 		}
-	case *packet.MobArmourEquipment:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MobEffect:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
-	case *packet.MobEquipment:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MotionPredictionHints:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
-	case *packet.MoveActorAbsolute:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
-	case *packet.MoveActorDelta:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MovePlayer:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
