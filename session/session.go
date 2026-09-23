@@ -456,6 +456,7 @@ func (s *Session) setTransferring(v bool) {
 
 func (s *Session) queuePacket(from *minecraft.Conn, pk packet.Packet) {
 	if !s.swapped.Load() || from != s.ServerConn() {
+		s.log.Infof("TRACE dropped during transfer: %T", pk)
 		return
 	}
 	s.queuedMu.Lock()
@@ -469,12 +470,9 @@ func (s *Session) flushQueuedPackets() {
 	s.queued = nil
 	s.queuedMu.Unlock()
 
-	for i, pk := range pks {
+	for _, pk := range pks {
+		s.log.Infof("TRACE flushing queued: %T", pk)
 		_ = s.conn.WritePacket(pk)
-		if i%16 == 15 {
-			_ = s.conn.Flush()
-			time.Sleep(10 * time.Millisecond)
-		}
 	}
 }
 
