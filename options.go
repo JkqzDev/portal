@@ -28,4 +28,8 @@ type Options struct {
 	// IPGuard is used to reject connections from banned or abusive IP addresses before they reach the
 	// whitelist or game-layer authentication.
 	IPGuard session.IPGuard
+
+	// AntiCheatDisabled turns off the built-in anti-cheat for every session when true. It defaults to false
+	// (anti-cheat enabled), so the zero value keeps existing behaviour.
+	AntiCheatDisabled bool
 }

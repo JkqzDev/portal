@@ -22,12 +22,13 @@ type Portal struct {
 	listenConfig minecraft.ListenConfig
 	listener     *minecraft.Listener
 
-	sessionStore   *session.Store
-	serverRegistry *server.Registry
-	loadBalancer   session.LoadBalancer
-	whitelist      session.Whitelist
-	ipGuard        session.IPGuard
-	events         *event.Bus
+	sessionStore      *session.Store
+	serverRegistry    *server.Registry
+	loadBalancer      session.LoadBalancer
+	whitelist         session.Whitelist
+	ipGuard           session.IPGuard
+	antiCheatDisabled bool
+	events            *event.Bus
 }
 
 // New instantiates portal using the provided options and returns it. If some options are not set, default
@@ -52,12 +53,13 @@ func New(opts Options) *Portal {
 		address:      opts.Address,
 		listenConfig: opts.ListenConfig,
 
-		sessionStore:   session.NewDefaultStore(),
-		serverRegistry: serverRegistry,
-		loadBalancer:   opts.LoadBalancer,
-		whitelist:      opts.Whitelist,
-		ipGuard:        opts.IPGuard,
-		events:         event.NewBus(),
+		sessionStore:      session.NewDefaultStore(),
+		serverRegistry:    serverRegistry,
+		loadBalancer:      opts.LoadBalancer,
+		whitelist:         opts.Whitelist,
+		ipGuard:           opts.IPGuard,
+		antiCheatDisabled: opts.AntiCheatDisabled,
+		events:            event.NewBus(),
 	}
 }
 
@@ -134,7 +136,7 @@ func (p *Portal) Accept() (*session.Session, error) {
 		_ = p.Disconnect(c, m)
 		return nil, fmt.Errorf("player is not whitelisted: %s", m)
 	}
-	return session.New(c, p.sessionStore, p.loadBalancer, p.log, p.events)
+	return session.New(c, p.sessionStore, p.loadBalancer, p.log, p.events, p.antiCheatDisabled)
 }
 
 // Disconnect disconnects a Minecraft Conn passed by first sending a disconnect with the message passed, and

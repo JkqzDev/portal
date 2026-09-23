@@ -149,6 +149,11 @@ type Config struct {
 			Interval int `json:"interval"`
 		} `json:"hot_reload"`
 	} `json:"resource_packs"`
+	// AntiCheat holds settings related to the proxy's built-in anti-cheat.
+	AntiCheat struct {
+		// Enabled determines whether the anti-cheat is active for connecting players.
+		Enabled bool `json:"enabled"`
+	} `json:"anticheat"`
 	// MOTD is the message of the day shown in the server list ping.
 	MOTD string `json:"motd"`
 	// SubMOTD is the secondary MOTD line shown in the server list ping.
@@ -177,6 +182,7 @@ func DefaultConfig() (c Config) {
 	c.HealthCheck.FailureThreshold = 3
 	c.ResourcePacks.Directory = "resource_packs"
 	c.ResourcePacks.HotReload.Interval = 30
+	c.AntiCheat.Enabled = true
 	c.MOTD = "Portal"
 	c.SubMOTD = "Transfer Proxy"
 	return

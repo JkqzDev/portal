@@ -83,6 +83,7 @@ func main() {
 			time.Duration(conf.Security.RateLimit.WindowSeconds)*time.Second,
 			conf.Security.RateLimit.MaxAttempts,
 		),
+		AntiCheatDisabled: !conf.AntiCheat.Enabled,
 	})
 	if conf.Routing.DefaultGroup != "" {
 		p.SetLoadBalancer(session.NewGroupedLoadBalancer(p.ServerRegistry(), conf.Routing.DefaultGroup, conf.Routing.FallbackGroups...))

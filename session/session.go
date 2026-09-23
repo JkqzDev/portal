@@ -3,7 +3,6 @@ package session
 import (
 	"errors"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -73,7 +72,7 @@ type Session struct {
 
 // New creates a new Session with the provided connection. bus may be nil, in which case no events are
 // published for the session's lifecycle.
-func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log internal.Logger, bus *event.Bus) (s *Session, err error) {
+func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log internal.Logger, bus *event.Bus, antiCheatDisabled bool) (s *Session, err error) {
 	s = &Session{
 		log:          log,
 		conn:         conn,
@@ -133,7 +132,7 @@ func New(conn *minecraft.Conn, store *Store, loadBalancer LoadBalancer, log inte
 		}
 
 		s.translator = newTranslator(srvConn.GameData())
-		if os.Getenv("PORTAL_DISABLE_ANTICHEAT") != "1" {
+		if !antiCheatDisabled {
 			s.ac = player.NewPlayer(anticheatLogger(log), s.conn, s.serverConn)
 			s.ac.Handle(anticheatHandler{s: s})
 		}
