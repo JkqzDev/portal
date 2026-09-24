@@ -98,12 +98,15 @@ func handlePackets(s *Session) {
 			switch pk := pk.(type) {
 			case *packet.AddActor:
 				s.entities.Add(pk.EntityUniqueID)
+				s.warnIDCollision("AddActor", pk.EntityRuntimeID, pk.EntityUniqueID)
 			case *packet.AddItemActor:
 				s.entities.Add(pk.EntityUniqueID)
+				s.warnIDCollision("AddItemActor", pk.EntityRuntimeID, pk.EntityUniqueID)
 			case *packet.AddPainting:
 				s.entities.Add(pk.EntityUniqueID)
 			case *packet.AddPlayer:
 				s.entities.Add(pk.AbilityData.EntityUniqueID)
+				s.warnIDCollision("AddPlayer", pk.EntityRuntimeID, pk.AbilityData.EntityUniqueID)
 			case *packet.BossEvent:
 				if pk.EventType == packet.BossEventShow {
 					s.bossBars.Add(pk.BossEntityUniqueID)
@@ -187,5 +190,11 @@ func clearLegacyIdentity(pk packet.Packet, legacyAuth bool) {
 		pk.XUID = ""
 	case *packet.Text:
 		pk.XUID = ""
+	}
+}
+
+func (s *Session) warnIDCollision(kind string, runtimeID uint64, uniqueID int64) {
+	if runtimeID == s.originalRuntimeID || uniqueID == s.originalUniqueID {
+		s.log.Errorf("ID COLLISION %s for %s: runtimeID=%d uniqueID=%d clientRuntimeID=%d clientUniqueID=%d", kind, s.conn.IdentityData().DisplayName, runtimeID, uniqueID, s.originalRuntimeID, s.originalUniqueID)
 	}
 }
