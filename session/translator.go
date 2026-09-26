@@ -40,6 +40,8 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.ActorPickRequest:
 		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	case *packet.AddActor:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityUniqueID = t.avoidSelfUniqueID(pk.EntityUniqueID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
 		for i := range pk.EntityLinks {
 			pk.EntityLinks[i] = t.translateEntityLink(pk.EntityLinks[i])
@@ -47,12 +49,18 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.AgentAnimation:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.AddItemActor:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityUniqueID = t.avoidSelfUniqueID(pk.EntityUniqueID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
 	case *packet.AddPlayer:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.AbilityData.EntityUniqueID = t.avoidSelfUniqueID(pk.AbilityData.EntityUniqueID)
 		pk.EntityMetadata = t.translateEntityMetadata(pk.EntityMetadata)
 		for i := range pk.EntityLinks {
 			pk.EntityLinks[i] = t.translateEntityLink(pk.EntityLinks[i])
 		}
+	case *packet.RemoveActor:
+		pk.EntityUniqueID = t.avoidSelfUniqueID(pk.EntityUniqueID)
 	case *packet.AddVolumeEntity:
 		pk.EntityRuntimeID = t.translateRuntimeID32(pk.EntityRuntimeID)
 	case *packet.AdventureSettings:
@@ -200,6 +208,26 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		pk.VillagerUniqueID = t.translateUniqueID(pk.VillagerUniqueID)
 		pk.EntityUniqueID = t.translateUniqueID(pk.EntityUniqueID)
 	}
+}
+
+const selfIDOffset = 1 << 40
+
+// avoidSelfRuntimeID remaps an entity's own runtime ID away from the client's reserved runtime ID range,
+// so a different entity assigned the same numeric ID by the backend (a common occurrence, since IDs are
+// small and reused) is never mistaken by the client for the player's own entity.
+func (t *translator) avoidSelfRuntimeID(id uint64) uint64 {
+	if id == t.originalRuntimeID || id == t.currentRuntimeID.Load() {
+		return id + selfIDOffset
+	}
+	return id
+}
+
+// avoidSelfUniqueID is the AddActor equivalent of avoidSelfRuntimeID for unique IDs.
+func (t *translator) avoidSelfUniqueID(id int64) int64 {
+	if id == t.originalUniqueID || id == t.currentUniqueID.Load() {
+		return id + selfIDOffset
+	}
+	return id
 }
 
 // translateRuntimeID returns the correct entity runtime ID for the client to function properly.
