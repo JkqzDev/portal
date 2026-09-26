@@ -100,6 +100,14 @@ func handlePackets(s *Session) {
 			switch pk := pk.(type) {
 			case *packet.LevelSoundEvent:
 				s.log.Infof("TRACE sound: type=%s entityUniqueID=%d entityType=%s pos=%v", pk.SoundType, pk.EntityUniqueID, pk.EntityType, pk.Position)
+			case *packet.UpdateAttributes:
+				for _, a := range pk.Attributes {
+					if a.Name == "minecraft:health" {
+						s.log.Infof("TRACE health: entityRuntimeID=%d value=%v originalRuntimeID=%d", pk.EntityRuntimeID, a.Value, s.originalRuntimeID)
+					}
+				}
+			case *packet.ActorEvent:
+				s.log.Infof("TRACE actorEvent: type=%d entityRuntimeID=%d originalRuntimeID=%d", pk.EventType, pk.EntityRuntimeID, s.originalRuntimeID)
 			case *packet.AddActor:
 				s.entities.Add(pk.EntityUniqueID)
 				s.warnIDCollision("AddActor", pk.EntityRuntimeID, pk.EntityUniqueID)
