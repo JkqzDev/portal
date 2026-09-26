@@ -142,7 +142,16 @@ func (t *translator) translatePacket(pk packet.Packet) {
 			pk.EntityRuntimeIDs[i] = t.avoidSelfRuntimeID(pk.EntityRuntimeIDs[i])
 		}
 	case *packet.ActorEvent:
-		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
+		switch pk.EventType {
+		case packet.ActorEventHurt, packet.ActorEventDeath:
+			// These can legitimately be about the local player's own entity (e.g. taking damage), so a
+			// numeric match with our own ID is a real self-reference, not a collision to avoid.
+			pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
+		default:
+			// Events like StartAttacking/StopAttacking are only ever about some other entity the player is
+			// observing, so a numeric match here is a coincidental collision, not a genuine self-reference.
+			pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		}
 	case *packet.MovePlayer:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.RiddenEntityRuntimeID = t.translateRuntimeID(pk.RiddenEntityRuntimeID)
