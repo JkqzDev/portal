@@ -316,7 +316,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 			}
 			proxyDimension := selectProxyDimension(currentDimension, gameData.Dimension)
 			decoyPos := gameData.PlayerPosition.Add(mgl32.Vec3{2000, 0, 2000})
-			s.changeDimension(proxyDimension, decoyPos)
+			s.changeDimension(proxyDimension, decoyPos, false)
 			select {
 			case <-s.dimensionAck:
 			case <-time.After(250 * time.Millisecond):
@@ -333,7 +333,7 @@ func (s *Session) Transfer(srv *server.Server) (err error) {
 		})
 		_ = oldServerConn.Close()
 
-		s.changeDimension(gameData.Dimension, gameData.PlayerPosition)
+		s.changeDimension(gameData.Dimension, gameData.PlayerPosition, true)
 
 		_ = conn.WritePacket(&packet.SetLocalPlayerAsInitialised{EntityRuntimeID: gameData.EntityRuntimeID})
 
@@ -590,7 +590,7 @@ func (s *Session) clearScoreboard() {
 	s.scoreboards.Clear()
 }
 
-func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
+func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3, stopSound bool) {
 	if s.ac != nil {
 		s.ac.SetInDimensionChange(true)
 	}
@@ -598,7 +598,9 @@ func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3) {
 		Dimension: dimension,
 		Position:  pos,
 	})
-	_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
+	if stopSound {
+		_ = s.conn.WritePacket(&packet.StopSound{StopAll: true})
+	}
 	_ = s.conn.WritePacket(&packet.PlayerAction{EntityRuntimeID: s.originalRuntimeID, ActionType: protocol.PlayerActionDimensionChangeDone})
 }
 
