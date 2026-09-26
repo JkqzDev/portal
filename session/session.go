@@ -591,9 +591,6 @@ func (s *Session) clearScoreboard() {
 }
 
 func (s *Session) changeDimension(dimension int32, pos mgl32.Vec3, stopSound bool) {
-	if s.ac != nil {
-		s.ac.SetInDimensionChange(true)
-	}
 	_ = s.conn.WritePacket(&packet.ChangeDimension{
 		Dimension: dimension,
 		Position:  pos,
