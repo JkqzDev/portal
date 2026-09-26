@@ -125,6 +125,22 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MotionPredictionHints:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
+	case *packet.MoveActorAbsolute:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+	case *packet.MoveActorDelta:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+	case *packet.MobEquipment:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+	case *packet.MobArmourEquipment:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+	case *packet.Animate:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+	case *packet.AnimateEntity:
+		for i := range pk.EntityRuntimeIDs {
+			pk.EntityRuntimeIDs[i] = t.avoidSelfRuntimeID(pk.EntityRuntimeIDs[i])
+		}
+	case *packet.ActorEvent:
+		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
 	case *packet.MovePlayer:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.RiddenEntityRuntimeID = t.translateRuntimeID(pk.RiddenEntityRuntimeID)
