@@ -142,7 +142,7 @@ func (t *translator) translatePacket(pk packet.Packet) {
 			pk.EntityRuntimeIDs[i] = t.avoidSelfRuntimeID(pk.EntityRuntimeIDs[i])
 		}
 	case *packet.ActorEvent:
-		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MovePlayer:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.RiddenEntityRuntimeID = t.translateRuntimeID(pk.RiddenEntityRuntimeID)
