@@ -28,6 +28,8 @@ func handlePackets(s *Session) {
 			clearLegacyIdentity(pk, s.Server().LegacyAuth())
 
 			switch pk := pk.(type) {
+			case *packet.LevelSoundEvent:
+				s.log.Infof("TRACE client sound: type=%s entityUniqueID=%d entityType=%s pos=%v", pk.SoundType, pk.EntityUniqueID, pk.EntityType, pk.Position)
 			case *packet.CommandRequest:
 				if handleCommandRequest(s, pk) {
 					continue
@@ -96,6 +98,8 @@ func handlePackets(s *Session) {
 			s.translatePacket(pk)
 
 			switch pk := pk.(type) {
+			case *packet.LevelSoundEvent:
+				s.log.Infof("TRACE sound: type=%s entityUniqueID=%d entityType=%s pos=%v", pk.SoundType, pk.EntityUniqueID, pk.EntityType, pk.Position)
 			case *packet.AddActor:
 				s.entities.Add(pk.EntityUniqueID)
 				s.warnIDCollision("AddActor", pk.EntityRuntimeID, pk.EntityUniqueID)
