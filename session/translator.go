@@ -121,6 +121,8 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		case *protocol.UseItemOnEntityTransactionData:
 			data.TargetEntityRuntimeID = t.translateRuntimeID(data.TargetEntityRuntimeID)
 		}
+	case *packet.LevelSoundEvent:
+		pk.EntityUniqueID = t.avoidSelfSoundEntityID(pk.EntityUniqueID)
 	case *packet.MobEffect:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MotionPredictionHints:
@@ -233,6 +235,15 @@ const selfIDOffset = 1 << 40
 // small and reused) is never mistaken by the client for the player's own entity.
 func (t *translator) avoidSelfRuntimeID(id uint64) uint64 {
 	if id == t.originalRuntimeID || id == t.currentRuntimeID.Load() {
+		return id + selfIDOffset
+	}
+	return id
+}
+
+// avoidSelfSoundEntityID is like avoidSelfRuntimeID, but for LevelSoundEvent.EntityUniqueID, which despite
+// its name most servers fill with the entity's runtime ID rather than its unique ID.
+func (t *translator) avoidSelfSoundEntityID(id int64) int64 {
+	if id == int64(t.originalRuntimeID) || id == int64(t.currentRuntimeID.Load()) {
 		return id + selfIDOffset
 	}
 	return id
