@@ -122,7 +122,7 @@ func (t *translator) translatePacket(pk packet.Packet) {
 			data.TargetEntityRuntimeID = t.translateRuntimeID(data.TargetEntityRuntimeID)
 		}
 	case *packet.LevelSoundEvent:
-		pk.EntityUniqueID = t.avoidSelfSoundEntityID(pk.EntityUniqueID)
+		pk.EntityUniqueID = t.translateRuntimeIDInt64(pk.EntityUniqueID)
 	case *packet.MobEffect:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MotionPredictionHints:
@@ -132,26 +132,17 @@ func (t *translator) translatePacket(pk packet.Packet) {
 	case *packet.MoveActorDelta:
 		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
 	case *packet.MobEquipment:
-		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MobArmourEquipment:
-		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.Animate:
-		pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
+		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.AnimateEntity:
 		for i := range pk.EntityRuntimeIDs {
-			pk.EntityRuntimeIDs[i] = t.avoidSelfRuntimeID(pk.EntityRuntimeIDs[i])
+			pk.EntityRuntimeIDs[i] = t.translateRuntimeID(pk.EntityRuntimeIDs[i])
 		}
 	case *packet.ActorEvent:
-		switch pk.EventType {
-		case packet.ActorEventHurt, packet.ActorEventDeath:
-			// These can legitimately be about the local player's own entity (e.g. taking damage), so a
-			// numeric match with our own ID is a real self-reference, not a collision to avoid.
-			pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
-		default:
-			// Events like StartAttacking/StopAttacking are only ever about some other entity the player is
-			// observing, so a numeric match here is a coincidental collision, not a genuine self-reference.
-			pk.EntityRuntimeID = t.avoidSelfRuntimeID(pk.EntityRuntimeID)
-		}
+		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MovePlayer:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 		pk.RiddenEntityRuntimeID = t.translateRuntimeID(pk.RiddenEntityRuntimeID)
@@ -244,15 +235,6 @@ const selfIDOffset = 1 << 40
 // small and reused) is never mistaken by the client for the player's own entity.
 func (t *translator) avoidSelfRuntimeID(id uint64) uint64 {
 	if id == t.originalRuntimeID || id == t.currentRuntimeID.Load() {
-		return id + selfIDOffset
-	}
-	return id
-}
-
-// avoidSelfSoundEntityID is like avoidSelfRuntimeID, but for LevelSoundEvent.EntityUniqueID, which despite
-// its name most servers fill with the entity's runtime ID rather than its unique ID.
-func (t *translator) avoidSelfSoundEntityID(id int64) int64 {
-	if id == int64(t.originalRuntimeID) || id == int64(t.currentRuntimeID.Load()) {
 		return id + selfIDOffset
 	}
 	return id
