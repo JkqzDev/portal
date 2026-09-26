@@ -121,6 +121,8 @@ func (t *translator) translatePacket(pk packet.Packet) {
 		case *protocol.UseItemOnEntityTransactionData:
 			data.TargetEntityRuntimeID = t.translateRuntimeID(data.TargetEntityRuntimeID)
 		}
+	case *packet.LevelSoundEvent:
+		pk.EntityUniqueID = t.avoidSelfUniqueID(pk.EntityUniqueID)
 	case *packet.MobEffect:
 		pk.EntityRuntimeID = t.translateRuntimeID(pk.EntityRuntimeID)
 	case *packet.MotionPredictionHints:
